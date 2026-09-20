@@ -1,117 +1,188 @@
-# TypeScript Crawlee & CheerioCrawler Actor Template
+# Degen Radar
 
-<!-- This is an Apify template readme -->
+## What is Degen Radar?
 
-This template example was built with [Crawlee](https://crawlee.dev/) to scrape data from a website using [Cheerio](https://cheerio.js.org/) wrapped into [CheerioCrawler](https://crawlee.dev/api/cheerio-crawler/class/CheerioCrawler).
+Degen Radar is an Apify Actor that detects unusual cryptocurrency market behavior by analyzing convergence between independent market signals. Built as a research/data intelligence tool (NOT a trading bot), it helps identify noteworthy market conditions through signal analysis rather than making price predictions.
 
-## Quick Start
+**Key Principle**: A single signal should not automatically produce a strong radar result. The system collects multiple independent signals, normalizes them, evaluates their convergence, identifies deterministic patterns, calculates an explainable Radar Score, and outputs the evidence and risk factors.
 
-Once you've installed the dependencies, start the Actor:
+## 🔬 V1 Signals Analyzed
 
-```bash
-apify run
+For the initial Solana-focused version, Degen Radar examines these five signal categories with transparent reporting on data source availability:
+
+1. **Momentum** - 24h price change percentage from CoinGecko API ✅ WORKING
+2. **Liquidity** - 24h trading volume from CoinGecko API (proxy for liquidity/activity) ✅ WORKING  
+3. **Holder Activity** - Holder count data ❌ NOT AVAILABLE from accessible APIs
+4. **Tracked-Wallet Flow** - Current token holdings in tracked wallets from Solana RPC ✅ WORKING
+5. **Attention/Social Activity** - Social media mentions ❌ NOT ACCESSIBLE due to API restrictions
+
+Each signal reports real data where available, with clear explanations when data is unavailable rather than inventing values.
+
+## 🔄 Convergence Engine
+
+The core of Degen Radar is its deterministic pattern detection engine that evaluates signal combinations to identify:
+
+- **Quiet Accumulation**: High holder level + significant wallet holdings + low attention + moderate momentum
+- **Momentum Breakout**: Strong positive momentum + sufficient liquidity + substantial holder base + elevated social activity
+- **Social-Only Hype**: High social media attention without corresponding momentum, liquidity, holder base, or wallet holdings
+- **Distribution**: Low holder count + low tracked wallet holdings + negative momentum
+- **Liquidity Risk**: Critically low liquidity levels
+
+Each pattern detection includes human-readable evidence explaining exactly which signals contributed to the determination, with actual measured values when available.
+
+## 📊 Radar Score
+
+Degen Radar calculates an explainable Radar Score (0-100) based on the weighted average of normalized signal values. The score represents the strength of observed signal convergence, NOT a price prediction or trading recommendation.
+
+**Scoring Formula**:
+```
+Radar Score = Σ(normalized_signal_value × signal_weight) / Σ(active_signal_weights) × 100
 ```
 
-Once your Actor is ready, you can push it to the Apify Console:
+Weights:
+- Momentum: 25%
+- Liquidity: 20%
+- Holder Activity: 20%
+- Tracked-Wallet Flow: 20%
+- Attention/Social: 15%
 
-```bash
-apify login # first, you need to log in if you haven't already done so
+The score is calculated ONLY from available signals. Unavailable signals are not treated as zero but are excluded from the calculation with appropriate weighting adjustment.
 
-apify push
+## 🏗️ Architecture
+
+Degen Radar follows a modular architecture:
+
 ```
-
-## Project Structure
-
-```text
-.actor/
-├── actor.json # Actor config: name, version, env vars, runtime settings
-├── dataset_schema.json # Structure and representation of data produced by an Actor
-├── input_schema.json # Input validation & Console form definition
-└── output_schema.json # Specifies where an Actor stores its output
 src/
-└── main.ts # Actor entry point and orchestrator
-storage/ # Local storage (mirrors Cloud during development)
-├── datasets/ # Output items (JSON objects)
-├── key_value_stores/ # Files, config, INPUT
-└── request_queues/ # Pending crawl requests
-Dockerfile # Container image definition
+├── main.ts                 # Actor entry point
+├── sources/                # Signal data collectors (MIXED REAL/PLACEHOLDER)
+│   ├── momentum.ts         # Price data from CoinGecko API (REAL)
+│   ├── liquidity.ts        # Trading volume from CoinGecko API (REAL PROXY)
+│   ├── holders.ts          # Holder count (UNAVAILABLE - clear explanation)
+│   ├── walletFlow.ts       # Wallet holdings from Solana RPC (REAL)
+│   └── attention.ts        # Social media monitoring (UNACCESSIBLE - clear explanation)
+├── normalization/          # Signal normalization to 0-100 scale
+├── engine/                 # Core logic
+│   ├── convergence.ts      # Pattern detection engine
+│   └── scoring.ts          # Radar Score calculation
+├── types/                  # TypeScript interfaces
+├── config/                 # Configuration constants
+└── utils/                  # Helper functions
 ```
 
-For more information, see the [Actor definition](https://docs.apify.com/platform/actors/development/actor-definition) documentation.
+## 🔧 Actor Input
 
-## How it works
+Configure your analysis through these parameters:
 
-This code is a TypeScript script that uses Cheerio to scrape data from a website. It then stores the website titles in a dataset.
+| Field | Type | Description | Default |
+|-------|------|-------------|---------|
+| tokenAddresses | Array | Solana token addresses to analyze | `[SOL address]` |
+| maxTokens | Integer | Maximum tokens to process | 10 |
+| observationWindowHours | Integer | Hours to look back for signal calculation (used for holder/wallet context) | 4 |
+| minLiquidityThreshold | Integer | Minimum liquidity threshold (USD) | 10000 |
+| minSignalAvailability | Number | Minimum signal availability ratio (0-1) | 0.6 |
+| enabledSignalCategories | Array | Signal categories to enable | All five |
+| trackedWalletAddresses | Array | Specific Solana wallet addresses to track for holdings analysis | `[]` |
+| attentionSources | Array | Social media sources to monitor | `[twitter, reddit]` |
 
-- The crawler starts with URLs provided from the input `startUrls` field defined by the input schema. Number of scraped pages is limited by `maxPagesPerCrawl` field from the input schema.
-- The crawler uses `requestHandler` for each URL to extract the data from the page with the Cheerio library and to save the title and URL of each page to the dataset. It also logs out each result that is being saved.
+## 📤 Dataset Output
 
-## What's included
+Results are stored in an Apify Dataset with these key fields:
 
-- **[Apify SDK](https://docs.apify.com/sdk/js)** - toolkit for building [Actors](https://apify.com/actors)
-- **[Crawlee](https://crawlee.dev/)** - web scraping and browser automation library
-- **[Input schema](https://docs.apify.com/platform/actors/development/input-schema)** - define and easily validate a schema for your Actor's input
-- **[Dataset](https://docs.apify.com/sdk/python/docs/concepts/storages#working-with-datasets)** - store structured data where each object stored has the same attributes
-- **[Cheerio](https://cheerio.js.org/)** - a fast, flexible & elegant library for parsing and manipulating HTML and XML
-- **[Proxy configuration](https://docs.apify.com/platform/proxy)** - rotate IP addresses to prevent blocking
+- **id**: Unique result identifier
+- **token**: Token symbol (from CoinGecko) or address if symbol unavailable
+- **tokenAddress**: Solana token address
+- **chain**: Blockchain (solana)
+- **timestamp**: Data collection time
+- **radarScore**: Convergence score (0-100)
+- **pattern**: Detected pattern or null
+- **signals**: Raw signal values and availability with metadata explaining availability
+- **evidence**: Human-readable explanation with actual values when available
+- **riskFlags**: Identified risks
+- **discoveredAt**: Result generation time
 
-## Resources
+In the Apify Console Output tab, you'll see a table showing:
+- Token
+- Address
+- Radar Score
+- Pattern
+- Timestamp
+- Evidence
+- Risk Flags
 
-- [Quick Start](https://docs.apify.com/platform/actors/development/quick-start) guide for building your first Actor
-- [Video tutorial](https://www.youtube.com/watch?v=yTRHomGg9uQ) on building a scraper using CheerioCrawler
-- [Written tutorial](https://docs.apify.com/academy/web-scraping-for-beginners/challenge) on building a scraper using CheerioCrawler
-- [Web scraping with Cheerio in 2023](https://blog.apify.com/web-scraping-with-cheerio/)
-- How to [scrape a dynamic page](https://blog.apify.com/what-is-a-dynamic-page/) using Cheerio
-- [Integration with Zapier](https://apify.com/integrations), Make, Google Drive and others
-- [Video guide on getting data using Apify API](https://www.youtube.com/watch?v=ViYYDHSBAKM)
+## 🧪 Local Development
 
-## Creating Actors with templates
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-[How to create Apify Actors with web scraping code templates](https://www.youtube.com/watch?v=u-i-Korzf8w)
+2. **Run locally**:
+   ```bash
+   apify run
+   ```
 
+3. **Test with different inputs**:
+   Modify the input in `payload.json` or use the Apify CLI:
+   ```bash
+   apify run --input='{"tokenAddresses":[{"value":"So11111111111111111111111111111111111111112"}]}'
+   ```
 
-## Getting started
+## 🚀 Deployment
 
-For complete information [see this article](https://docs.apify.com/platform/actors/development#build-actor-at-apify-console). In short, you will:
+1. **Login to Apify**:
+   ```bash
+   apify login
+   ```
 
-1. Build the Actor
-2. Run the Actor
+2. **Deploy the Actor**:
+   ```bash
+   apify push
+   ```
 
-## Pull the Actor for local development
+3. **Run on Apify Platform**:
+   - Use the Apify Console
+   - Or via CLI: `apify call <your-username>/degen-radar`
 
-If you would like to develop locally, you can pull the existing Actor from Apify console using Apify CLI:
+## ⚠️ Limitations & Responsible Use
 
-1. Install `apify-cli`
+**Important Limitations**:
+- **Momentum**: Uses CoinGecko API for 24h price change - REAL DATA ✅
+- **Liquidity**: Uses CoinGecko 24h trading volume as proxy (NOT on-chain DEX liquidity) - REAL DATA ✅
+- **Holder Activity**: Holder count data NOT AVAILABLE from accessible APIs - CLEARLY MARKED UNAVAILABLE ❌
+- **Tracked-Wallet Flow**: Uses Solana RPC for current token holdings in tracked wallets - REAL DATA ✅
+  - NOTE: Shows current holdings, not flow/change over time (would require historical balance data)
+- **Attention/Social Activity**: Social media data NOT ACCESSIBLE due to API restrictions (Reddit/Twitter blocking) - CLEARLY MARKED UNAVAILABLE ❌
+- Analysis is for research purposes only
+- Does not execute trades, manage funds, or make buy/sell recommendations
+- Signal availability varies by token and data source
+- Public Solana RPC may have rate limits for wallet balance queries with many tracked wallets
 
-    **Using Homebrew**
+**Responsible Use Guidelines**:
+- This tool is for research and education only
+- Never rely solely on Radar Scores for financial decisions
+- Always do your own research (DYOR)
+- Respect API rate limits and terms of service
+- The Actor does not constitute financial advice
+- Cryptocurrency markets are highly volatile and risky
 
-    ```bash
-    brew install apify-cli
-    ```
+## 🔍 Data Sources
 
-    **Using NPM**
+Degen Radar uses transparent data source reporting:
 
-    ```bash
-    npm -g install apify-cli
-    ```
+- **Price Data**: CoinGecko API (https://api.coingecko.com) - provides price, 24h change, volume, market cap
+- **Liquidity Proxy**: CoinGecko API - provides 24h trading volume from exchanges (NOT on-chain liquidity)
+- **Holder Count**: NOT AVAILABLE from CoinGecko or other accessible APIs in this environment
+- **Wallet Holdings**: Solana RPC (https://api.mainnet-beta.solana.com) - uses getTokenAccountsByOwner to query token balances in associated token accounts
+- **Social Attention**: NOT ACCESSIBLE due to API blocking (Reddit/Twitter returning HTML instead of JSON)
 
-2. Pull the Actor by its unique `<ActorId>`, which is one of the following:
-    - unique name of the Actor to pull (e.g. "apify/hello-world")
-    - or ID of the Actor to pull (e.g. "E2jjCZBezvAZnX8Rb")
+Unavailable data sources are explicitly marked as such with clear explanations rather than inventing values or using placeholders.
 
-    You can find both by clicking on the Actor title at the top of the page, which will open a modal containing both Actor unique name and Actor ID.
+## 📧 Support & Custom Solutions
 
-    This command will copy the Actor into the current directory on your local machine.
+For questions, issues, or custom Actor development:
+- Check the Issues tab in the Apify Console
+- Consider hiring an Apify Expert for specialized solutions
+- Join the Apify Discord community for developer support
 
-    ```bash
-    apify pull <ActorId>
-    ```
-
-## Documentation reference
-
-To learn more about Apify and Actors, take a look at the following resources:
-
-- [Apify SDK for JavaScript documentation](https://docs.apify.com/sdk/js)
-- [Apify SDK for Python documentation](https://docs.apify.com/sdk/python)
-- [Apify Platform documentation](https://docs.apify.com/platform)
-- [Join our developer community on Discord](https://discord.com/invite/jyEM2PRvMU)
+**Note**: This implementation follows Apify Actors development best practices including proper abort handling, error management, and Apify SDK usage. All signal collections are transparent about data source availability and limitations.

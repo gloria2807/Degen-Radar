@@ -8,6 +8,10 @@ dist
 node_modules
 apify_storage
 storage
+.venv
+
+# Environment variables
+.env
+.env.*
 
 # Added by Apify CLI
-.venv
