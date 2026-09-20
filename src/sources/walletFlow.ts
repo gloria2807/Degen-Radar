@@ -1,8 +1,8 @@
 // Wallet flow signal collector - tracks current token holdings in tracked wallets
 
-import { httpPost } from '../utils/http';
-import { SignalValue } from '../types';
-import { CONFIG } from '../config';
+import { httpPost } from '../utils/http.js';
+import { SignalValue } from '../types/index.js';
+import { CONFIG } from '../config/index.js';
 
 /**
  * Fetches wallet holdings data for tracked wallets
@@ -13,7 +13,7 @@ import { CONFIG } from '../config';
 export async function fetchWalletFlowSignal(
   tokenAddress: string,
   trackedWalletAddresses: string[],
-  chain: string = 'solana'
+  _chain: string = 'solana'
 ): Promise<SignalValue> {
   try {
     // If no tracked wallets specified, we can't calculate holdings
@@ -96,7 +96,7 @@ export async function fetchWalletFlowSignal(
 
         return { walletAddress, balance: walletBalance, error: null };
       } catch (error) {
-        return { walletAddress, balance: null, error: error.message };
+        return { walletAddress, balance: null, error: error instanceof Error ? error.message : String(error) };
       }
     });
 
@@ -145,7 +145,9 @@ export async function fetchWalletFlowSignal(
       timestamp: Date.now(),
       source: 'walletFlow',
       available: false,
-      metadata: { error: error.message }
+      metadata: {
+  error: error instanceof Error ? error.message : String(error),
+}
     };
   }
 }

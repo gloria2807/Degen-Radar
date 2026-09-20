@@ -1,7 +1,7 @@
 // Signal normalization layer - converts raw signals to 0-100 scores
 
-import { SignalValue, Signals } from '../types';
-import { CONFIG } from '../config';
+import { SignalValue, Signals } from '../types/index.js';
+import { CONFIG } from '../config/index.js';
 
 /**
  * Normalizes raw signal values to 0-100 scores

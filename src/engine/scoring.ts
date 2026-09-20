@@ -1,7 +1,7 @@
 // Radar Score calculation - combines normalized signals into a single score
 
-import { CONFIG } from '../config';
-import type { Signals } from '../types';
+import { CONFIG } from '../config/index.js';
+import type { Signals } from '../types/index.js';
 
 /**
  * Calculates Radar Score from normalized signals

@@ -1,8 +1,8 @@
 // Liquidity signal collector - tracks trading volume as a proxy for liquidity
 
-import { httpGet } from '../utils/http';
-import { SignalValue } from '../types';
-import { CONFIG } from '../config';
+import { httpGet } from '../utils/http.js';
+import { SignalValue } from '../types/index.js';
+import { CONFIG } from '../config/index.js';
 
 /**
  * Fetches liquidity proxy data for a token
@@ -12,7 +12,7 @@ import { CONFIG } from '../config';
  */
 export async function fetchLiquiditySignal(
   tokenAddress: string,
-  chain: string = 'solana'
+  _chain: string = 'solana'
 ): Promise<SignalValue> {
   try {
     // First, we need to get the CoinGecko ID for the token address
@@ -64,7 +64,9 @@ export async function fetchLiquiditySignal(
       timestamp: Date.now(),
       source: 'liquidity',
       available: false,
-      metadata: { error: error.message }
+      metadata: {
+  error: error instanceof Error ? error.message : String(error),
+}
     };
   }
 }

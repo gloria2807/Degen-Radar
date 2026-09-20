@@ -3,16 +3,16 @@
 // note that we need to use `.js` even when inside TS files
 import { setTimeout } from 'node:timers/promises';
 
-import { CheerioCrawler } from './crawlee/cheerio';
 // Apify SDK - toolkit for building Apify Actors (Read more at https://docs.apify.com/sdk/js/)
 import { Actor } from 'apify';
-
-import { detectPatterns } from './engine/convergence.ts';
-import { calculateRadarScore } from './engine/scoring.ts';
-import { normalizeSignals } from './normalization/index.ts';
+import { CONFIG } from './config/index.js';
+import { httpGet } from './utils/http.js';
+import { detectPatterns } from './engine/convergence.js';
+import { calculateRadarScore } from './engine/scoring.js';
+import { normalizeSignals } from './normalization/index.js';
 // Import our modules
-import { fetchAllSignals } from './sources/index.ts';
-import type { ActorInput, RadarResult } from './types/index.ts';
+import { fetchAllSignals } from './sources/index.js';
+import type { ActorInput, RadarResult } from './types/index.js';
 
 // Helper function to get token symbol from CoinGecko for display purposes
 async function getTokenSymbol(tokenAddress: string): Promise<string> {

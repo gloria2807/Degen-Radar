@@ -1,8 +1,8 @@
 // Holder activity signal collector - tracks holder count
 
-import { httpGet } from '../utils/http';
-import { SignalValue } from '../types';
-import { CONFIG } from '../config';
+import { httpGet } from '../utils/http.js';
+import { SignalValue } from '../types/index.js';
+import { CONFIG } from '../config/index.js';
 
 /**
  * Fetches holder data for a token
@@ -11,9 +11,9 @@ import { CONFIG } from '../config';
  * For this implementation, we return unavailable with a clear explanation.
  */
 export async function fetchHoldersSignal(
-  tokenAddress: string,
-  chain: string = 'solana',
-  observationWindowHours: number = CONFIG.DEFAULT_OBSERVATION_WINDOW_HOURS
+  _tokenAddress: string,
+  _chain: string = 'solana',
+  _observationWindowHours: number = CONFIG.DEFAULT_OBSERVATION_WINDOW_HOURS
 ): Promise<SignalValue> {
   try {
     // We attempted to get holder data from CoinGecko with community_data and developer_data
@@ -39,7 +39,9 @@ export async function fetchHoldersSignal(
       timestamp: Date.now(),
       source: 'holders',
       available: false,
-      metadata: { error: error.message }
+      metadata: {
+  error: error instanceof Error ? error.message : String(error),
+}
     };
   }
 }

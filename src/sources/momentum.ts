@@ -1,8 +1,8 @@
 // Momentum signal collector - tracks price changes
 
-import { httpGet } from '../utils/http';
-import { SignalValue } from '../types';
-import { CONFIG } from '../config';
+import { httpGet } from '../utils/http.js';
+import { SignalValue } from '../types/index.js';
+import { CONFIG } from '../config/index.js';
 
 /**
  * Fetches price data for a token and calculates momentum
@@ -10,8 +10,8 @@ import { CONFIG } from '../config';
  */
 export async function fetchMomentumSignal(
   tokenAddress: string,
-  chain: string = 'solana',
-  observationWindowHours: number = CONFIG.DEFAULT_OBSERVATION_WINDOW_HOURS
+  _chain: string = 'solana',
+  _observationWindowHours: number = CONFIG.DEFAULT_OBSERVATION_WINDOW_HOURS
 ): Promise<SignalValue> {
   try {
     // First, we need to get the CoinGecko ID for the token address
@@ -63,7 +63,9 @@ export async function fetchMomentumSignal(
       timestamp: Date.now(),
       source: 'momentum',
       available: false,
-      metadata: { error: error.message }
+      metadata: {
+  error: error instanceof Error ? error.message : String(error),
+}
     };
   }
 }

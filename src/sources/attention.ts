@@ -1,8 +1,8 @@
 // Attention/social signal collector - tracks social media mentions and engagement
 
-import { httpGet } from '../utils/http';
-import { SignalValue } from '../types';
-import { CONFIG } from '../config';
+import { httpGet } from '../utils/http.js';
+import { SignalValue } from '../types/index.js';
+import { CONFIG } from '../config/index.js';
 
 /**
  * Fetches attention/social data for a token
@@ -14,9 +14,9 @@ import { CONFIG } from '../config';
  * 4. Using web scraping techniques (not recommended due to ToS and blocking)
  */
 export async function fetchAttentionSignal(
-  tokenAddress: string,
-  tokenSymbol?: string,
-  observationWindowHours: number = CONFIG.DEFAULT_OBSERVATION_WINDOW_HOURS
+  _tokenAddress: string,
+_tokenSymbol?: string,
+_observationWindowHours: number = CONFIG.DEFAULT_OBSERVATION_WINDOW_HOURS
 ): Promise<SignalValue> {
   try {
     // We attempted to use Reddit API but it's blocking requests from this environment
@@ -39,7 +39,9 @@ export async function fetchAttentionSignal(
       timestamp: Date.now(),
       source: 'attention',
       available: false,
-      metadata: { error: error.message }
+      metadata: {
+  error: error instanceof Error ? error.message : String(error),
+}
     };
   }
 }

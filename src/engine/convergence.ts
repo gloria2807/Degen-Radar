@@ -1,7 +1,12 @@
 // Convergence engine - detects patterns based on signal combinations
 
-import { CONFIG } from '../config';
-import type { PatternEvidence, RiskFlag,Signals } from '../types';
+import { CONFIG } from '../config/index.js';
+import type {
+  PatternEvidence,
+  RiskFlag,
+  SignalValue,
+  Signals,
+} from '../types/index.js';
 
 /**
  * Detects convergence patterns from normalized signals
@@ -19,7 +24,15 @@ export function detectPatterns(normalizedSignals: Signals): {
   riskFlags: RiskFlag[]
 } {
   const evidence: PatternEvidence[] = [];
-  const riskFlags: RiskFlag[] = [];
+const riskFlags: RiskFlag[] = [];
+
+const getMetadataNumber = (
+  signal: SignalValue,
+  key: string
+): number => {
+  const value = signal.metadata?.[key];
+  return typeof value === 'number' ? value : 0;
+};
 
   // Helper to check if signal is available and has value
   const isAvailable = (signal: SignalValue): boolean =>
@@ -33,11 +46,30 @@ export function detectPatterns(normalizedSignals: Signals): {
   const att = normalizedSignals.attention.value ?? 0; // attention level (24h post count)
 
   // Get original values for evidence
-  const momOrig = normalizedSignals.momentum.metadata?.originalValue ?? 0; // actual 24h change %
-  const liqOrig = normalizedSignals.liquidity.metadata?.liquidityUsd ?? 0; // actual liquidity USD
-  const wfOrig = normalizedSignals.walletFlow.metadata?.originalValue ?? 0; // actual wallet holdings
-  const holdOrig = normalizedSignals.holders.metadata?.holderCount ?? 0; // actual holder count
-  const attOrig = normalizedSignals.attention.metadata?.totalPosts ?? 0; // actual 24h post count
+  const momOrig = getMetadataNumber(
+  normalizedSignals.momentum,
+  'originalValue'
+);
+
+const liqOrig = getMetadataNumber(
+  normalizedSignals.liquidity,
+  'liquidityUsd'
+);
+
+const wfOrig = getMetadataNumber(
+  normalizedSignals.walletFlow,
+  'originalValue'
+);
+
+const holdOrig = getMetadataNumber(
+  normalizedSignals.holders,
+  'holderCount'
+);
+
+const attOrig = getMetadataNumber(
+  normalizedSignals.attention,
+  'totalPosts'
+);
 
   // Check for Quiet Accumulation pattern
   // Adapted interpretation:
@@ -140,11 +172,10 @@ export function detectPatterns(normalizedSignals: Signals): {
       liqOrig < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.liquidityMax; // e.g., low liquidity
 
     const lowHolderLevel =
-      holdOrig < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.holderLevelMin; // e.g., low holder count
+  holdOrig < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.holderLevelMax;
 
     const lowWalletBalance =
-      wfOrig < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.walletBalanceMin; // e.g., low wallet holdings
-
+  wfOrig < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.walletBalanceMax;
     if (highAttentionLevel && weakOrNegativeMomentum && lowLiquidityLevel && lowHolderLevel && lowWalletBalance) {
       evidence.push({
         description: `High social media attention (${attOrig.toFixed(0)} posts/24h) without corresponding momentum (${momOrig.toFixed(2)}% 24h change), liquidity (${liqOrig.toFixed(0)} USD), holder base (${holdOrig.toFixed(0)} holders), or wallet holdings (${wfOrig.toFixed(2)} tokens)`,
