@@ -40,7 +40,6 @@
       "title": "Enabled Signal Categories",
       "type": "array",
       "description": "Signal categories to collect.",
-      "editor": "checkboxgroup",
       "default": [
         "momentum",
         "liquidity",
