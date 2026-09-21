@@ -1,128 +1,117 @@
 {
-  "actorSpecification": 1,
-  "fields": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "type": "object",
-    "properties": {
-      "id": {
-        "type": "string",
-        "title": "Result ID",
-        "description": "Unique identifier for this radar result"
-      },
-      "token": {
-        "type": "string",
-        "title": "Token Symbol",
-        "description": "Token symbol or address if symbol is unavailable"
-      },
-      "tokenAddress": {
-        "type": "string",
-        "title": "Token Address",
-        "description": "Solana token mint address"
-      },
-      "chain": {
-        "type": "string",
-        "title": "Blockchain",
-        "description": "Blockchain network"
-      },
-      "timestamp": {
-        "type": "string",
-        "title": "Timestamp",
-        "description": "When the signal data was collected"
-      },
-      "radarScore": {
-        "type": "number",
-        "title": "Radar Score",
-        "description": "Convergence-based evidence score from 0 to 100. This is not a price prediction."
-      },
-      "pattern": {
-        "type": [
-          "string",
-          "null"
-        ],
-        "title": "Detected Pattern",
-        "description": "Detected convergence pattern, or null when no pattern is established"
-      },
-      "signals": {
+    "actorSpecification": 1,
+    "fields": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
-        "title": "Signal Details",
-        "description": "Signal values, availability, sources, timestamps, and metadata"
-      },
-      "evidence": {
-        "type": "string",
-        "title": "Evidence",
-        "description": "Human-readable explanation based on the collected signals"
-      },
-      "riskFlags": {
-        "type": "string",
-        "title": "Risk Flags",
-        "description": "Risks and limitations identified from the collected data"
-      },
-      "discoveredAt": {
-        "type": "string",
-        "title": "Discovered At",
-        "description": "When this radar result was generated"
-      }
-    },
-    "required": [
-      "id",
-      "tokenAddress",
-      "chain",
-      "timestamp",
-      "radarScore",
-      "pattern",
-      "signals",
-      "evidence",
-      "riskFlags",
-      "discoveredAt"
-    ]
-  },
-  "views": {
-    "overview": {
-      "title": "Degen Radar Overview",
-      "transformation": {
-        "fields": [
-          "token",
-          "tokenAddress",
-          "radarScore",
-          "pattern",
-          "timestamp",
-          "evidence",
-          "riskFlags"
-        ]
-      },
-      "display": {
-        "component": "table",
         "properties": {
-          "token": {
-            "label": "Token",
-            "format": "text"
-          },
-          "tokenAddress": {
-            "label": "Address",
-            "format": "text"
-          },
-          "radarScore": {
-            "label": "Radar Score",
-            "format": "number"
-          },
-          "pattern": {
-            "label": "Pattern",
-            "format": "text"
-          },
-          "timestamp": {
-            "label": "Time",
-            "format": "date"
-          },
-          "evidence": {
-            "label": "Evidence",
-            "format": "text"
-          },
-          "riskFlags": {
-            "label": "Risk Flags",
-            "format": "text"
-          }
+            "id": {
+                "type": "string",
+                "title": "Result ID",
+                "description": "Unique identifier for this radar result"
+            },
+            "token": {
+                "type": "string",
+                "title": "Token Symbol",
+                "description": "Token symbol or address if symbol is unavailable"
+            },
+            "tokenAddress": {
+                "type": "string",
+                "title": "Token Address",
+                "description": "Solana token mint address"
+            },
+            "chain": {
+                "type": "string",
+                "title": "Blockchain",
+                "description": "Blockchain network"
+            },
+            "timestamp": {
+                "type": "string",
+                "title": "Timestamp",
+                "description": "When the signal data was collected"
+            },
+            "radarScore": {
+                "type": "number",
+                "title": "Radar Score",
+                "description": "Convergence-based evidence score from 0 to 100. This is not a price prediction."
+            },
+            "pattern": {
+                "type": ["string", "null"],
+                "title": "Detected Pattern",
+                "description": "Detected convergence pattern, or null when no pattern is established"
+            },
+            "signals": {
+                "type": "object",
+                "title": "Signal Details",
+                "description": "Signal values, availability, sources, timestamps, and metadata"
+            },
+            "evidence": {
+                "type": "string",
+                "title": "Evidence",
+                "description": "Human-readable explanation based on the collected signals"
+            },
+            "riskFlags": {
+                "type": "string",
+                "title": "Risk Flags",
+                "description": "Risks and limitations identified from the collected data"
+            },
+            "discoveredAt": {
+                "type": "string",
+                "title": "Discovered At",
+                "description": "When this radar result was generated"
+            }
+        },
+        "required": [
+            "id",
+            "tokenAddress",
+            "chain",
+            "timestamp",
+            "radarScore",
+            "pattern",
+            "signals",
+            "evidence",
+            "riskFlags",
+            "discoveredAt"
+        ]
+    },
+    "views": {
+        "overview": {
+            "title": "Degen Radar Overview",
+            "transformation": {
+                "fields": ["token", "tokenAddress", "radarScore", "pattern", "timestamp", "evidence", "riskFlags"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "token": {
+                        "label": "Token",
+                        "format": "text"
+                    },
+                    "tokenAddress": {
+                        "label": "Address",
+                        "format": "text"
+                    },
+                    "radarScore": {
+                        "label": "Radar Score",
+                        "format": "number"
+                    },
+                    "pattern": {
+                        "label": "Pattern",
+                        "format": "text"
+                    },
+                    "timestamp": {
+                        "label": "Time",
+                        "format": "date"
+                    },
+                    "evidence": {
+                        "label": "Evidence",
+                        "format": "text"
+                    },
+                    "riskFlags": {
+                        "label": "Risk Flags",
+                        "format": "text"
+                    }
+                }
+            }
         }
-      }
     }
-  }
 }

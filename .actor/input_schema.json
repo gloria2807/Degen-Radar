@@ -1,94 +1,83 @@
 {
-    "$schema": "https://apify.com/schemas/v1/input.ide.json",
-    "title": "Degen Radar Input",
-    "type": "object",
-    "schemaVersion": 1,
-    "properties": {
-        "tokenAddresses": {
-            "title": "Token Addresses",
-            "type": "array",
-            "description": "Solana token addresses to analyze (maximum 44 characters, base58 encoded)",
-            "editor": "stringList",
-            "prefill": [
-                {
-                    "value": "So11111111111111111111111111111111111111112"
-                }
-            ]
-        },
-        "maxTokens": {
-            "title": "Maximum Tokens to Process",
-            "type": "integer",
-            "description": "Maximum number of tokens to process from the list",
-            "default": 10,
-            "minimum": 1,
-            "maximum": 100
-        },
-        "observationWindowHours": {
-            "title": "Observation Window (Hours)",
-            "type": "integer",
-            "description": "Number of hours to look back for signal calculation",
-            "default": 4,
-            "minimum": 1,
-            "maximum": 168
-        },
-        "minLiquidityThreshold": {
-            "title": "Minimum Liquidity Threshold (USD)",
-            "type": "integer",
-            "description": "Minimum liquidity in USD for a token to be considered",
-            "default": 10000,
-            "minimum": 0
-        },
-        "minSignalAvailability": {
-            "title": "Minimum Signal Availability Ratio",
-            "type": "number",
-            "description": "Minimum ratio of signals that must be available (0-1)",
-            "default": 0.6,
-            "minimum": 0,
-            "maximum": 1
-        },
-        "enabledSignalCategories": {
-            "title": "Enabled Signal Categories",
-            "type": "array",
-            "description": "Which signal categories to enable for analysis",
-            "editor": "stringList",
-            "prefill": [
-                {
-                    "value": "momentum"
-                },
-                {
-                    "value": "liquidity"
-                },
-                {
-                    "value": "holders"
-                },
-                {
-                    "value": "walletFlow"
-                },
-                {
-                    "value": "attention"
-                }
-            ]
-        },
-        "trackedWalletAddresses": {
-            "title": "Tracked Wallet Addresses (Optional)",
-            "type": "array",
-            "description": "Specific Solana wallet addresses to track for flow analysis",
-            "editor": "stringList"
-        },
-        "attentionSources": {
-            "title": "Attention Sources",
-            "type": "array",
-            "description": "Social media sources to monitor for attention signals",
-            "editor": "stringList",
-            "prefill": [
-                {
-                    "value": "twitter"
-                },
-                {
-                    "value": "reddit"
-                }
-            ]
-        }
+  "title": "Degen Radar Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "tokenAddresses": {
+      "title": "Token Addresses",
+      "type": "array",
+      "description": "Solana token mint addresses to analyze.",
+      "editor": "stringList",
+      "items": {
+        "type": "string"
+      }
     },
-    "required": ["tokenAddresses"]
+    "maxTokens": {
+      "title": "Maximum Tokens",
+      "type": "integer",
+      "description": "Maximum number of tokens to process.",
+      "default": 10,
+      "minimum": 1,
+      "maximum": 50
+    },
+    "observationWindowHours": {
+      "title": "Observation Window (hours)",
+      "type": "integer",
+      "description": "Observation window used by time-dependent signal sources.",
+      "default": 4,
+      "minimum": 1,
+      "maximum": 168
+    },
+    "minSignalAvailability": {
+      "title": "Minimum Signal Availability",
+      "type": "number",
+      "description": "Minimum fraction of signals that must be available before a token is analyzed.",
+      "default": 0.6,
+      "minimum": 0,
+      "maximum": 1
+    },
+    "enabledSignalCategories": {
+      "title": "Enabled Signal Categories",
+      "type": "array",
+      "description": "Signal categories to collect.",
+      "editor": "checkboxgroup",
+      "default": [
+        "momentum",
+        "liquidity",
+        "holders",
+        "walletFlow",
+        "attention"
+      ],
+      "items": {
+        "type": "string",
+        "enum": [
+          "momentum",
+          "liquidity",
+          "holders",
+          "walletFlow",
+          "attention"
+        ],
+        "enumTitles": [
+          "Momentum",
+          "Liquidity",
+          "Holders",
+          "Wallet Flow",
+          "Attention"
+        ]
+      }
+    },
+    "trackedWalletAddresses": {
+      "title": "Tracked Wallet Addresses",
+      "type": "array",
+      "description": "Optional Solana wallet addresses to monitor for token flow.",
+      "editor": "stringList",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    }
+  },
+  "required": [
+    "tokenAddresses"
+  ]
 }

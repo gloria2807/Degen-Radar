@@ -7,39 +7,47 @@ import type { Signals } from '../types/index.js';
  * Calculates Radar Score from normalized signals
  */
 export function calculateRadarScore(normalizedSignals: Signals): number {
-  const weights = CONFIG.SCORE_WEIGHTS;
-  let score = 0;
-  let totalWeight = 0;
+    const weights = CONFIG.SCORE_WEIGHTS;
+    let score = 0;
+    let totalWeight = 0;
 
-  // Add weighted score for each available signal
-  if (normalizedSignals.momentum.available && normalizedSignals.momentum.value !== null) {
-    score += normalizedSignals.momentum.value * weights.momentum;
-    totalWeight += weights.momentum;
-  }
+    if (normalizedSignals.momentum.available && normalizedSignals.momentum.value !== null) {
+        score += normalizedSignals.momentum.value * weights.momentum;
+        totalWeight += weights.momentum;
+    }
 
-  if (normalizedSignals.liquidity.available && normalizedSignals.liquidity.value !== null) {
-    score += normalizedSignals.liquidity.value * weights.liquidity;
-    totalWeight += weights.liquidity;
-  }
+    if (normalizedSignals.liquidity.available && normalizedSignals.liquidity.value !== null) {
+        score += normalizedSignals.liquidity.value * weights.liquidity;
+        totalWeight += weights.liquidity;
+    }
 
-  if (normalizedSignals.holders.available && normalizedSignals.holders.value !== null) {
-    score += normalizedSignals.holders.value * weights.holders;
-    totalWeight += weights.holders;
-  }
+    if (normalizedSignals.holders.available && normalizedSignals.holders.value !== null) {
+        score += normalizedSignals.holders.value * weights.holders;
+        totalWeight += weights.holders;
+    }
 
-  if (normalizedSignals.walletFlow.available && normalizedSignals.walletFlow.value !== null) {
-    score += normalizedSignals.walletFlow.value * weights.walletFlow;
-    totalWeight += weights.walletFlow;
-  }
+    if (normalizedSignals.walletFlow.available && normalizedSignals.walletFlow.value !== null) {
+        score += normalizedSignals.walletFlow.value * weights.walletFlow;
+        totalWeight += weights.walletFlow;
+    }
 
-  if (normalizedSignals.attention.available && normalizedSignals.attention.value !== null) {
-    score += normalizedSignals.attention.value * weights.attention;
-    totalWeight += weights.attention;
-  }
+    if (normalizedSignals.attention.available && normalizedSignals.attention.value !== null) {
+        score += normalizedSignals.attention.value * weights.attention;
+        totalWeight += weights.attention;
+    }
 
-  // If no signals available, return 0
-  if (totalWeight === 0) return 0;
+    console.log('SCORING DEBUG:', {
+        momentum: normalizedSignals.momentum.value,
+        momentumAvailable: normalizedSignals.momentum.available,
+        liquidity: normalizedSignals.liquidity.value,
+        liquidityAvailable: normalizedSignals.liquidity.available,
+        weights,
+        score,
+        totalWeight,
+        calculatedScore: totalWeight === 0 ? 0 : score / totalWeight,
+    });
 
-  // Normalize by total weight to get 0-100 score
-  return Math.min(100, Math.max(0, (score / totalWeight) * 100));
+    if (totalWeight === 0) return 0;
+
+    return Math.min(100, Math.max(0, score / totalWeight));
 }

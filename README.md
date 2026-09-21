@@ -1,188 +1,588 @@
 # Degen Radar
 
-## What is Degen Radar?
+Degen Radar is an **Apify Actor for detecting unusual cryptocurrency market conditions through converging signals**.
 
-Degen Radar is an Apify Actor that detects unusual cryptocurrency market behavior by analyzing convergence between independent market signals. Built as a research/data intelligence tool (NOT a trading bot), it helps identify noteworthy market conditions through signal analysis rather than making price predictions.
+It collects independent market signals for Solana tokens, normalizes them to a common 0–100 scale, evaluates how those signals interact, detects predefined market patterns, calculates an explainable Radar Score, and returns the evidence and risk factors behind each result.
 
-**Key Principle**: A single signal should not automatically produce a strong radar result. The system collects multiple independent signals, normalizes them, evaluates their convergence, identifies deterministic patterns, calculates an explainable Radar Score, and outputs the evidence and risk factors.
+Degen Radar is a **research and data-intelligence tool, not a trading bot**. It does not execute trades, manage funds, or predict future prices.
 
-## 🔬 V1 Signals Analyzed
+## How It Works
 
-For the initial Solana-focused version, Degen Radar examines these five signal categories with transparent reporting on data source availability:
+Degen Radar follows a simple pipeline:
 
-1. **Momentum** - 24h price change percentage from CoinGecko API ✅ WORKING
-2. **Liquidity** - 24h trading volume from CoinGecko API (proxy for liquidity/activity) ✅ WORKING  
-3. **Holder Activity** - Holder count data ❌ NOT AVAILABLE from accessible APIs
-4. **Tracked-Wallet Flow** - Current token holdings in tracked wallets from Solana RPC ✅ WORKING
-5. **Attention/Social Activity** - Social media mentions ❌ NOT ACCESSIBLE due to API restrictions
+```text
+Token Address
+     ↓
+Signal Collection
+     ↓
+Signal Normalization
+     ↓
+Convergence Analysis
+     ↓
+Radar Score
+     ↓
+Pattern + Evidence + Risk Flags
+     ↓
+Apify Dataset
+```
 
-Each signal reports real data where available, with clear explanations when data is unavailable rather than inventing values.
+The core principle is that **one signal should not automatically produce a strong result**.
+
+Instead, Degen Radar looks for relationships between multiple signals. A token showing strong price momentum means something different when liquidity, holder breadth, wallet activity, and market attention also support the observation.
+
+The resulting analysis is deterministic and explainable. Every detected pattern includes evidence showing the signals that contributed to it.
+
+---
+
+## 🔬 Signals
+
+The current Solana version analyzes five signal categories.
+
+| Signal          | What it measures                                      | Current source |
+| --------------- | ----------------------------------------------------- | -------------- |
+| **Momentum**    | 24h price change percentage                           | DEX Screener   |
+| **Liquidity**   | USD liquidity of the highest-liquidity trading pair   | DEX Screener   |
+| **Holders**     | Current unique token holders                          | Solana RPC     |
+| **Wallet Flow** | Net token movement across configured tracked wallets  | Solana RPC     |
+| **Attention**   | Market activity and available project/social metadata | DEX Screener   |
+
+### 1. Momentum
+
+Momentum uses the token's 24-hour price change.
+
+The raw percentage is normalized to a 0–100 signal value using configurable thresholds.
+
+The system preserves the original value and whether the movement was positive so that pattern detection can distinguish positive momentum from negative momentum.
+
+### 2. Liquidity
+
+Liquidity uses the USD liquidity reported by DEX Screener for the token's highest-liquidity trading pair.
+
+This provides a direct market-liquidity measurement rather than using trading volume as a proxy.
+
+Very low liquidity can trigger the `liquidity_risk` pattern.
+
+### 3. Holders
+
+Holder data is collected from the Solana blockchain through Solana RPC.
+
+The current implementation measures **current holder breadth**, meaning the number of unique accounts holding the token.
+
+It does not currently claim historical holder growth or holder accumulation over time.
+
+### 4. Tracked-Wallet Flow
+
+Users can provide specific Solana wallet addresses to track.
+
+Degen Radar examines token movements associated with those wallets and calculates a net token-flow signal.
+
+Positive net flow indicates that the tracked wallets received more of the token than they sent during the observed activity.
+
+**Important:** token flow does not prove that a wallet bought or sold the token. Transfers can occur for many reasons.
+
+If no tracked wallets are provided, wallet-flow information may be unavailable.
+
+### 5. Attention
+
+The attention signal currently uses DEX Screener market activity and available token metadata, including factors such as:
+
+* Trading activity
+* Liquidity-relative activity
+* Transaction activity
+* Available social links
+* Available website information
+
+This is a **market-attention proxy**.
+
+It is not a direct measurement of social-media mentions, sentiment, or viral activity.
+
+---
 
 ## 🔄 Convergence Engine
 
-The core of Degen Radar is its deterministic pattern detection engine that evaluates signal combinations to identify:
+The convergence engine evaluates normalized signals together and looks for predefined combinations.
 
-- **Quiet Accumulation**: High holder level + significant wallet holdings + low attention + moderate momentum
-- **Momentum Breakout**: Strong positive momentum + sufficient liquidity + substantial holder base + elevated social activity
-- **Social-Only Hype**: High social media attention without corresponding momentum, liquidity, holder base, or wallet holdings
-- **Distribution**: Low holder count + low tracked wallet holdings + negative momentum
-- **Liquidity Risk**: Critically low liquidity levels
+Degen Radar currently recognizes five patterns.
 
-Each pattern detection includes human-readable evidence explaining exactly which signals contributed to the determination, with actual measured values when available.
+### Quiet Accumulation
+
+Indicates a combination of:
+
+* A meaningful current holder base
+* Positive tracked-wallet token flow
+* Low market attention
+* Limited price momentum
+
+The result is intentionally described as a signal combination rather than proof that accumulation is occurring.
+
+### Momentum Breakout
+
+Indicates:
+
+* Strong positive momentum
+* Sufficient liquidity
+* A substantial holder base
+* Elevated market attention
+
+This pattern identifies strong simultaneous market signals. It does not predict that the price will continue rising.
+
+### Social-Only Hype
+
+Indicates:
+
+* High attention
+* Limited momentum
+* Low liquidity
+* Limited holder breadth
+* Limited or unavailable positive wallet-flow evidence
+
+The pattern highlights situations where attention is not accompanied by comparable market fundamentals.
+
+### Distribution
+
+Indicates:
+
+* Low holder breadth
+* Negative tracked-wallet flow
+* Negative or weak momentum
+
+This identifies a combination of weakening market signals and negative tracked-wallet movement.
+
+### Liquidity Risk
+
+Indicates critically low normalized liquidity.
+
+This pattern can be detected independently of the other convergence patterns because insufficient liquidity represents a direct market-structure risk.
+
+---
 
 ## 📊 Radar Score
 
-Degen Radar calculates an explainable Radar Score (0-100) based on the weighted average of normalized signal values. The score represents the strength of observed signal convergence, NOT a price prediction or trading recommendation.
+Degen Radar calculates an explainable score from **0 to 100** using the weighted average of available normalized signals.
 
-**Scoring Formula**:
+### Weights
+
+| Signal      | Weight |
+| ----------- | -----: |
+| Momentum    |    25% |
+| Liquidity   |    20% |
+| Holders     |    20% |
+| Wallet Flow |    20% |
+| Attention   |    15% |
+
+The score uses only signals that are currently available.
+
+Unavailable signals are **excluded from the calculation rather than treated as zero**. The remaining weights are automatically rebalanced through the weighted-average calculation.
+
+### Formula
+
+```text
+Radar Score =
+Σ(normalized signal × signal weight)
+-------------------------------------
+       Σ(active signal weights)
 ```
-Radar Score = Σ(normalized_signal_value × signal_weight) / Σ(active_signal_weights) × 100
-```
 
-Weights:
-- Momentum: 25%
-- Liquidity: 20%
-- Holder Activity: 20%
-- Tracked-Wallet Flow: 20%
-- Attention/Social: 15%
+The result is constrained to the 0–100 range.
 
-The score is calculated ONLY from available signals. Unavailable signals are not treated as zero but are excluded from the calculation with appropriate weighting adjustment.
+A higher score means that the currently available signals collectively show stronger normalized activity according to Degen Radar's rules.
+
+It is **not a price prediction, probability of a price increase, or trading recommendation**.
+
+---
 
 ## 🏗️ Architecture
 
-Degen Radar follows a modular architecture:
+Degen Radar uses a modular TypeScript architecture:
 
-```
+```text
 src/
-├── main.ts                 # Actor entry point
-├── sources/                # Signal data collectors (MIXED REAL/PLACEHOLDER)
-│   ├── momentum.ts         # Price data from CoinGecko API (REAL)
-│   ├── liquidity.ts        # Trading volume from CoinGecko API (REAL PROXY)
-│   ├── holders.ts          # Holder count (UNAVAILABLE - clear explanation)
-│   ├── walletFlow.ts       # Wallet holdings from Solana RPC (REAL)
-│   └── attention.ts        # Social media monitoring (UNACCESSIBLE - clear explanation)
-├── normalization/          # Signal normalization to 0-100 scale
-├── engine/                 # Core logic
-│   ├── convergence.ts      # Pattern detection engine
-│   └── scoring.ts          # Radar Score calculation
-├── types/                  # TypeScript interfaces
-├── config/                 # Configuration constants
-└── utils/                  # Helper functions
+├── main.ts                    # Actor entry point
+│
+├── sources/                   # Signal data collectors
+│   ├── momentum.ts            # 24h price momentum
+│   ├── liquidity.ts           # USD liquidity
+│   ├── holders.ts             # Current holder breadth
+│   ├── walletFlow.ts          # Tracked-wallet token flow
+│   └── attention.ts           # Market attention proxy
+│
+├── normalization/
+│   └── index.ts               # Converts raw signals to 0–100
+│
+├── engine/
+│   ├── convergence.ts         # Pattern detection + evidence
+│   └── scoring.ts              # Radar Score calculation
+│
+├── types/
+│   └── index.ts               # Shared TypeScript interfaces
+│
+├── config/
+│   └── index.ts               # Thresholds and scoring weights
+│
+└── utils/
+    └── http.ts                # HTTP and utility functions
 ```
+
+The separation between collection, normalization, scoring, and convergence makes it possible to replace or extend individual data sources without rewriting the core analysis engine.
+
+---
 
 ## 🔧 Actor Input
 
-Configure your analysis through these parameters:
+The Actor accepts the following input:
 
-| Field | Type | Description | Default |
-|-------|------|-------------|---------|
-| tokenAddresses | Array | Solana token addresses to analyze | `[SOL address]` |
-| maxTokens | Integer | Maximum tokens to process | 10 |
-| observationWindowHours | Integer | Hours to look back for signal calculation (used for holder/wallet context) | 4 |
-| minLiquidityThreshold | Integer | Minimum liquidity threshold (USD) | 10000 |
-| minSignalAvailability | Number | Minimum signal availability ratio (0-1) | 0.6 |
-| enabledSignalCategories | Array | Signal categories to enable | All five |
-| trackedWalletAddresses | Array | Specific Solana wallet addresses to track for holdings analysis | `[]` |
-| attentionSources | Array | Social media sources to monitor | `[twitter, reddit]` |
+| Field                     | Type    | Description                                              | Default  |
+| ------------------------- | ------- | -------------------------------------------------------- | -------- |
+| `tokenAddresses`          | Array   | Solana token mint addresses to analyze                   | Required |
+| `maxTokens`               | Integer | Maximum number of tokens to process                      | `10`     |
+| `observationWindowHours`  | Integer | Observation window used by time-dependent signal sources | `4`      |
+| `minSignalAvailability`   | Number  | Minimum fraction of signals that must be available       | `0.6`    |
+| `enabledSignalCategories` | Array   | Signal categories to collect                             | All five |
+| `trackedWalletAddresses`  | Array   | Solana wallets to monitor for token flow                 | `[]`     |
+
+### Example
+
+```json
+{
+  "tokenAddresses": [
+    "62yzpmKJB6XiVtZcQZhUkUXhqwN3UgCbffUi4JM9pump"
+  ],
+  "maxTokens": 10,
+  "observationWindowHours": 4,
+  "minSignalAvailability": 0.6,
+  "enabledSignalCategories": [
+    "momentum",
+    "liquidity",
+    "holders",
+    "walletFlow",
+    "attention"
+  ],
+  "trackedWalletAddresses": []
+}
+```
+
+### Selective Signals
+
+Individual signal categories can be disabled.
+
+For example:
+
+```json
+{
+  "tokenAddresses": [
+    "YOUR_TOKEN_ADDRESS"
+  ],
+  "enabledSignalCategories": [
+    "momentum",
+    "liquidity",
+    "holders"
+  ]
+}
+```
+
+Disabled signals are reported as unavailable and are excluded from Radar Score calculation.
+
+---
 
 ## 📤 Dataset Output
 
-Results are stored in an Apify Dataset with these key fields:
+Each analyzed token produces a structured record in the Apify Dataset.
 
-- **id**: Unique result identifier
-- **token**: Token symbol (from CoinGecko) or address if symbol unavailable
-- **tokenAddress**: Solana token address
-- **chain**: Blockchain (solana)
-- **timestamp**: Data collection time
-- **radarScore**: Convergence score (0-100)
-- **pattern**: Detected pattern or null
-- **signals**: Raw signal values and availability with metadata explaining availability
-- **evidence**: Human-readable explanation with actual values when available
-- **riskFlags**: Identified risks
-- **discoveredAt**: Result generation time
+A result contains:
 
-In the Apify Console Output tab, you'll see a table showing:
-- Token
-- Address
-- Radar Score
-- Pattern
-- Timestamp
-- Evidence
-- Risk Flags
+| Field          | Description                                   |
+| -------------- | --------------------------------------------- |
+| `id`           | Unique result identifier                      |
+| `token`        | Token symbol/name when available              |
+| `tokenAddress` | Solana token mint address                     |
+| `chain`        | Blockchain, currently `solana`                |
+| `timestamp`    | Analysis timestamp                            |
+| `radarScore`   | Normalized convergence score from 0–100       |
+| `pattern`      | Detected pattern or `null`                    |
+| `signals`      | Raw and normalized signal information         |
+| `evidence`     | Human-readable evidence for detected patterns |
+| `riskFlags`    | Identified risk conditions                    |
+| `sourceData`   | Analysis metadata and available sources       |
+| `discoveredAt` | Result generation timestamp                   |
+
+### Example Result Structure
+
+```json
+{
+  "token": "TOKEN",
+  "tokenAddress": "TOKEN_MINT",
+  "chain": "solana",
+  "radarScore": 62.13,
+  "pattern": "momentum_breakout",
+  "signals": {
+    "momentum": {
+      "value": 1355,
+      "available": true
+    },
+    "liquidity": {
+      "value": 112432.19,
+      "available": true
+    },
+    "holders": {
+      "value": 3467,
+      "available": true
+    },
+    "walletFlow": {
+      "value": 0,
+      "available": true
+    },
+    "attention": {
+      "value": 95,
+      "available": true
+    }
+  },
+  "evidence": [],
+  "riskFlags": []
+}
+```
+
+The actual dataset also contains timestamps, source information, normalization metadata, and pattern-specific evidence.
+
+---
 
 ## 🧪 Local Development
 
-1. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+### 1. Clone the repository
 
-2. **Run locally**:
-   ```bash
-   apify run
-   ```
+```bash
+git clone https://github.com/gloria2807/Degen-Radar.git
+cd Degen-Radar
+```
 
-3. **Test with different inputs**:
-   Modify the input in `payload.json` or use the Apify CLI:
-   ```bash
-   apify run --input='{"tokenAddresses":[{"value":"So11111111111111111111111111111111111111112"}]}'
-   ```
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Build the project
+
+```bash
+npm run build
+```
+
+### 4. Run tests
+
+```bash
+npm test
+```
+
+### 5. Run linting
+
+```bash
+npm run lint
+```
+
+### 6. Check formatting
+
+```bash
+npm run format:check
+```
+
+### 7. Run the Actor locally
+
+```bash
+apify run
+```
+
+The local Actor uses the configured Apify storage directories and input data.
+
+---
+
+## 🧪 Testing
+
+The project includes automated tests for the core analytical components.
+
+The test suite covers:
+
+* Signal normalization
+* Momentum normalization
+* Liquidity normalization
+* Wallet-flow handling
+* Radar Score calculation
+* Weighted scoring
+* Pattern detection
+* Risk-flag generation
+
+Real Solana token runs are also used to validate the complete pipeline from signal collection through dataset output.
+
+Before deployment, run:
+
+```bash
+npm test
+npm run build
+npm run lint
+npm run format:check
+```
+
+---
 
 ## 🚀 Deployment
 
-1. **Login to Apify**:
-   ```bash
-   apify login
-   ```
+### Login to Apify
 
-2. **Deploy the Actor**:
-   ```bash
-   apify push
-   ```
+```bash
+apify login
+```
 
-3. **Run on Apify Platform**:
-   - Use the Apify Console
-   - Or via CLI: `apify call <your-username>/degen-radar`
+### Push the Actor
 
-## ⚠️ Limitations & Responsible Use
+```bash
+apify push
+```
 
-**Important Limitations**:
-- **Momentum**: Uses CoinGecko API for 24h price change - REAL DATA ✅
-- **Liquidity**: Uses CoinGecko 24h trading volume as proxy (NOT on-chain DEX liquidity) - REAL DATA ✅
-- **Holder Activity**: Holder count data NOT AVAILABLE from accessible APIs - CLEARLY MARKED UNAVAILABLE ❌
-- **Tracked-Wallet Flow**: Uses Solana RPC for current token holdings in tracked wallets - REAL DATA ✅
-  - NOTE: Shows current holdings, not flow/change over time (would require historical balance data)
-- **Attention/Social Activity**: Social media data NOT ACCESSIBLE due to API restrictions (Reddit/Twitter blocking) - CLEARLY MARKED UNAVAILABLE ❌
-- Analysis is for research purposes only
-- Does not execute trades, manage funds, or make buy/sell recommendations
-- Signal availability varies by token and data source
-- Public Solana RPC may have rate limits for wallet balance queries with many tracked wallets
+The Actor can then be run through the Apify Console or CLI.
 
-**Responsible Use Guidelines**:
-- This tool is for research and education only
-- Never rely solely on Radar Scores for financial decisions
-- Always do your own research (DYOR)
-- Respect API rate limits and terms of service
-- The Actor does not constitute financial advice
-- Cryptocurrency markets are highly volatile and risky
+```bash
+apify call <your-username>/degen-radar
+```
+
+When running on the Apify Platform, the Actor collects its input, performs the signal analysis, and pushes the resulting records to an Apify Dataset.
+
+---
+
+## ⚠️ Limitations
+
+Degen Radar is intentionally transparent about what its signals do and do not represent.
+
+### Data limitations
+
+**Momentum**
+
+Uses 24-hour price-change data from DEX Screener. It represents recent price movement and does not predict future movement.
+
+**Liquidity**
+
+Uses reported USD liquidity for the token's highest-liquidity trading pair on DEX Screener. Liquidity can change rapidly.
+
+**Holders**
+
+Measures current unique holders through Solana RPC. It does not currently provide historical holder-growth analysis.
+
+**Wallet Flow**
+
+Measures token movement involving configured tracked wallets. Positive or negative flow does not prove buying, selling, accumulation, or distribution.
+
+**Attention**
+
+Uses DEX Screener market activity and available metadata as an attention proxy. It is not a comprehensive social-media monitoring system and does not measure sentiment.
+
+**External dependencies**
+
+Signal collection depends on external APIs and Solana RPC availability. Individual signals can become unavailable because of API failures, rate limits, network problems, or missing data.
+
+### Analytical limitations
+
+Degen Radar uses deterministic thresholds and weighted scoring.
+
+The patterns are analytical classifications based on observed signals. They are not guarantees, predictions, probabilities, or investment recommendations.
+
+---
+
+## 🛡️ Responsible Use
+
+Degen Radar is designed for:
+
+* Cryptocurrency market research
+* Data analysis
+* Market-condition monitoring
+* Technical experimentation
+* Building downstream data applications
+* Research into multi-signal market analysis
+
+It does **not**:
+
+* Execute trades
+* Manage funds
+* Custody cryptocurrency
+* Provide personalized financial advice
+* Guarantee market outcomes
+* Predict future token prices
+
+Users should independently evaluate any information produced by the Actor and understand the limitations of the underlying data.
+
+---
 
 ## 🔍 Data Sources
 
-Degen Radar uses transparent data source reporting:
+### DEX Screener
 
-- **Price Data**: CoinGecko API (https://api.coingecko.com) - provides price, 24h change, volume, market cap
-- **Liquidity Proxy**: CoinGecko API - provides 24h trading volume from exchanges (NOT on-chain liquidity)
-- **Holder Count**: NOT AVAILABLE from CoinGecko or other accessible APIs in this environment
-- **Wallet Holdings**: Solana RPC (https://api.mainnet-beta.solana.com) - uses getTokenAccountsByOwner to query token balances in associated token accounts
-- **Social Attention**: NOT ACCESSIBLE due to API blocking (Reddit/Twitter returning HTML instead of JSON)
+Used for:
 
-Unavailable data sources are explicitly marked as such with clear explanations rather than inventing values or using placeholders.
+* Token/pair discovery
+* Token symbols and names
+* 24h price-change data
+* USD liquidity
+* Market activity
+* Available project metadata and social links
 
-## 📧 Support & Custom Solutions
+### Solana RPC
 
-For questions, issues, or custom Actor development:
-- Check the Issues tab in the Apify Console
-- Consider hiring an Apify Expert for specialized solutions
-- Join the Apify Discord community for developer support
+Used for:
 
-**Note**: This implementation follows Apify Actors development best practices including proper abort handling, error management, and Apify SDK usage. All signal collections are transparent about data source availability and limitations.
+* Current token-holder analysis
+* Token account discovery
+* Tracked-wallet token balances
+* Token movement analysis
+
+The default public Solana RPC endpoint is:
+
+```text
+https://api.mainnet-beta.solana.com
+```
+
+The Actor reports source availability as part of its output rather than silently replacing missing information with fabricated or placeholder values.
+
+---
+
+## 📁 Project Structure
+
+```text
+Degen-Radar/
+├── .actor/
+│   ├── actor.json
+│   ├── dataset_schema.json
+│   ├── input_schema.json
+│   └── output_schema.json
+│
+├── src/
+│   ├── config/
+│   ├── engine/
+│   ├── normalization/
+│   ├── sources/
+│   ├── types/
+│   ├── utils/
+│   └── main.ts
+│
+├── test/
+│   ├── main.test.ts
+│   ├── normalization.test.ts
+│   ├── scoring.test.ts
+│   └── convergence.test.ts
+│
+├── Dockerfile
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## 📌 Status
+
+Degen Radar is currently a **Solana-focused V1 research/data-intelligence Actor**.
+
+The current implementation focuses on making every signal transparent, deterministic, and explainable rather than maximizing the number of data sources.
+
+Future iterations can expand the signal layer with additional on-chain, market, and attention data sources while keeping the same normalization and convergence architecture.
+
+---
+
+## License
+
+ISC

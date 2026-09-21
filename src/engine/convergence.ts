@@ -1,276 +1,310 @@
-// Convergence engine - detects patterns based on signal combinations
+// Convergence engine - detects patterns from normalized signal combinations
 
 import { CONFIG } from '../config/index.js';
-import type {
-  PatternEvidence,
-  RiskFlag,
-  SignalValue,
-  Signals,
-} from '../types/index.js';
+import type { PatternEvidence, RiskFlag, Signals, SignalValue } from '../types/index.js';
 
-/**
- * Detects convergence patterns from normalized signals
- *
- * Signal Interpretations (after normalization to 0-100 scale):
- * - momentum: 24h price change percentage (absolute value, so high = big move either direction)
- * - liquidity: current liquidity level in USD (higher = more liquid)
- * - holders: current holder count (higher = more holders)
- * - walletFlow: current token balance held by tracked wallets (higher = more held)
- * - attention: social mention volume in last 24h (higher = more social activity)
- */
 export function detectPatterns(normalizedSignals: Signals): {
-  pattern: string | null;
-  evidence: PatternEvidence[];
-  riskFlags: RiskFlag[]
+    pattern: string | null;
+    evidence: PatternEvidence[];
+    riskFlags: RiskFlag[];
 } {
-  const evidence: PatternEvidence[] = [];
-const riskFlags: RiskFlag[] = [];
+    const evidence: PatternEvidence[] = [];
+    const riskFlags: RiskFlag[] = [];
 
-const getMetadataNumber = (
-  signal: SignalValue,
-  key: string
-): number => {
-  const value = signal.metadata?.[key];
-  return typeof value === 'number' ? value : 0;
-};
+    const isAvailable = (signal: SignalValue): boolean => signal.available && signal.value !== null;
 
-  // Helper to check if signal is available and has value
-  const isAvailable = (signal: SignalValue): boolean =>
-    signal.available && signal.value !== null;
+    const getMetadataNumber = (signal: SignalValue, key: string): number | null => {
+        const value = signal.metadata?.[key];
+        return typeof value === 'number' ? value : null;
+    };
 
-  // Extract values for easier access (all are 0-100 normalized values)
-  const mom = normalizedSignals.momentum.value ?? 0; // 24h price change % (absolute)
-  const liq = normalizedSignals.liquidity.value ?? 0; // liquidity level
-  const hold = normalizedSignals.holders.value ?? 0; // holder count level
-  const wf = normalizedSignals.walletFlow.value ?? 0; // wallet holdings level
-  const att = normalizedSignals.attention.value ?? 0; // attention level (24h post count)
+    const getMetadataBoolean = (signal: SignalValue, key: string): boolean | null => {
+        const value = signal.metadata?.[key];
+        return typeof value === 'boolean' ? value : null;
+    };
 
-  // Get original values for evidence
-  const momOrig = getMetadataNumber(
-  normalizedSignals.momentum,
-  'originalValue'
-);
+    const momentum = normalizedSignals.momentum.value ?? 0;
+    const liquidity = normalizedSignals.liquidity.value ?? 0;
+    const holders = normalizedSignals.holders.value ?? 0;
+    const walletFlow = normalizedSignals.walletFlow.value ?? 0;
+    const attention = normalizedSignals.attention.value ?? 0;
 
-const liqOrig = getMetadataNumber(
-  normalizedSignals.liquidity,
-  'liquidityUsd'
-);
+    const momentumOriginal = getMetadataNumber(normalizedSignals.momentum, 'originalValue');
 
-const wfOrig = getMetadataNumber(
-  normalizedSignals.walletFlow,
-  'originalValue'
-);
+    const liquidityOriginal = getMetadataNumber(normalizedSignals.liquidity, 'liquidityUsd');
 
-const holdOrig = getMetadataNumber(
-  normalizedSignals.holders,
-  'holderCount'
-);
+    const holderCount = getMetadataNumber(normalizedSignals.holders, 'holderCount');
 
-const attOrig = getMetadataNumber(
-  normalizedSignals.attention,
-  'totalPosts'
-);
+    const walletFlowRatio = getMetadataNumber(normalizedSignals.walletFlow, 'originalValue');
 
-  // Check for Quiet Accumulation pattern
-  // Adapted interpretation:
-  // * holder level is high (established holder base)
-  // * tracked wallets hold significant amount of tokens
-  // * attention volume is still relatively low
-  // * price momentum has not yet become extreme (not pumping yet)
-  if (isAvailable(normalizedSignals.holders) &&
-      isAvailable(normalizedSignals.walletFlow) &&
-      isAvailable(normalizedSignals.attention) &&
-      isAvailable(normalizedSignals.momentum)) {
+    const walletFlowPositive = getMetadataBoolean(normalizedSignals.walletFlow, 'isPositive');
 
-    const holderLevelHigh =
-      hold >= CONFIG.PATTERN_THRESHOLDS.QUIET_ACCUMULATION.holderLevelMin; // e.g., holder count high
+    /*
+     * QUIET ACCUMULATION
+     *
+     * Requires:
+     * - meaningful holder breadth
+     * - positive wallet flow
+     * - low market attention
+     * - non-extreme momentum
+     *
+     * This is deliberately based on wallet flow direction,
+     * not simply the amount currently held by tracked wallets.
+     */
+    if (
+        isAvailable(normalizedSignals.holders) &&
+        isAvailable(normalizedSignals.walletFlow) &&
+        isAvailable(normalizedSignals.attention) &&
+        isAvailable(normalizedSignals.momentum)
+    ) {
+        const holderBasePresent = holderCount !== null && holderCount >= 100;
 
-    const walletBalanceSignificant =
-      wf >= CONFIG.PATTERN_THRESHOLDS.QUIET_ACCUMULATION.walletBalanceMin; // e.g., significant holdings
+        const walletsAccumulating =
+            walletFlow >= CONFIG.PATTERN_THRESHOLDS.QUIET_ACCUMULATION.walletFlowMin && walletFlowPositive === true;
 
-    const attentionLevelLow =
-      att < CONFIG.PATTERN_THRESHOLDS.QUIET_ACCUMULATION.attentionMax; // e.g., low social activity
+        const attentionQuiet = attention < CONFIG.PATTERN_THRESHOLDS.QUIET_ACCUMULATION.attentionMax;
 
-    const momentumNotExtreme =
-      mom < CONFIG.PATTERN_THRESHOLDS.QUIET_ACCUMULATION.momentumMax; // e.g., not extreme 24h move
+        const momentumQuiet = momentum < CONFIG.PATTERN_THRESHOLDS.QUIET_ACCUMULATION.momentumMax;
 
-    if (holderLevelHigh && walletBalanceSignificant && attentionLevelLow && momentumNotExtreme) {
-      evidence.push({
-        description: `Holder level is high (${holdOrig.toFixed(0)} holders), tracked wallets hold significant token amount (${wfOrig.toFixed(2)} tokens), attention is low (${attOrig.toFixed(0)} posts/24h), and momentum is not extreme (${momOrig.toFixed(2)}% 24h change)`,
-        contributingSignals: ['holders', 'walletFlow', 'attention', 'momentum'],
-        signalValues: {
-          holders: hold,
-          walletFlow: wf,
-          attention: att,
-          momentum: mom
+        if (holderBasePresent && walletsAccumulating && attentionQuiet && momentumQuiet) {
+            evidence.push({
+                description:
+                    `Tracked wallet activity shows positive net token flow ` +
+                    `(${formatNumber(walletFlowRatio)} flow ratio), ` +
+                    `while the token has ${formatNumber(holderCount)} current holders, ` +
+                    `market attention remains low (${formatNumber(attention)}), ` +
+                    `and 24h price momentum remains limited ` +
+                    `(${formatNumber(momentumOriginal)}% change).`,
+                contributingSignals: ['holders', 'walletFlow', 'attention', 'momentum'],
+                signalValues: {
+                    holders,
+                    walletFlow,
+                    attention,
+                    momentum,
+                },
+            });
+
+            return {
+                pattern: 'quiet_accumulation',
+                evidence,
+                riskFlags,
+            };
         }
-      });
-      return {
-        pattern: 'quiet_accumulation',
-        evidence,
-        riskFlags
-      };
     }
-  }
 
-  // Check for Momentum Breakout pattern
-  // Adapted interpretation:
-  // * momentum is strongly positive (note: we use absolute value, so we need to check sign separately)
-  // * liquidity is sufficient
-  // * holder level is substantial (established base can support growth)
-  // * attention level is elevated (current social buzz)
-  if (isAvailable(normalizedSignals.momentum) &&
-      isAvailable(normalizedSignals.liquidity) &&
-      isAvailable(normalizedSignals.holders) &&
-      isAvailable(normalizedSignals.attention)) {
+    /*
+     * MOMENTUM BREAKOUT
+     *
+     * Requires:
+     * - strong positive price momentum
+     * - sufficient liquidity
+     * - meaningful holder breadth
+     * - elevated market attention
+     */
+    if (
+        isAvailable(normalizedSignals.momentum) &&
+        isAvailable(normalizedSignals.liquidity) &&
+        isAvailable(normalizedSignals.holders) &&
+        isAvailable(normalizedSignals.attention)
+    ) {
+        const strongPositiveMomentum =
+            momentum >= CONFIG.PATTERN_THRESHOLDS.MOMENTUM_BREAKOUT.momentumMin &&
+            momentumOriginal !== null &&
+            momentumOriginal > 0;
 
-    const strongPositiveMomentum =
-      momOrig >= CONFIG.PATTERN_THRESHOLDS.MOMENTUM_BREAKOUT.momentumMin && // e.g., strong positive 24h change
-      momOrig > 0; // Positive momentum (not absolute value)
+        const sufficientLiquidity = liquidity >= CONFIG.PATTERN_THRESHOLDS.MOMENTUM_BREAKOUT.liquidityMin;
 
-    const sufficientLiquidity =
-      liqOrig >= CONFIG.PATTERN_THRESHOLDS.MOMENTUM_BREAKOUT.liquidityMin; // e.g., sufficient liquidity USD
+        const establishedHolderBase = holders >= CONFIG.PATTERN_THRESHOLDS.MOMENTUM_BREAKOUT.holderLevelMin;
 
-    const holderLevelSubstantial =
-      holdOrig >= CONFIG.PATTERN_THRESHOLDS.MOMENTUM_BREAKOUT.holderLevelMin; // e.g., substantial holder base
+        const elevatedAttention = attention >= CONFIG.PATTERN_THRESHOLDS.MOMENTUM_BREAKOUT.attentionMin;
 
-    const attentionLevelElevated =
-      attOrig >= CONFIG.PATTERN_THRESHOLDS.MOMENTUM_BREAKOUT.attentionMin; // e.g., elevated social activity
+        if (strongPositiveMomentum && sufficientLiquidity && establishedHolderBase && elevatedAttention) {
+            evidence.push({
+                description:
+                    `Strong positive momentum ` +
+                    `(${formatNumber(momentumOriginal)}% 24h change), ` +
+                    `sufficient liquidity ` +
+                    `(${formatNumber(liquidityOriginal)} USD), ` +
+                    `established holder breadth ` +
+                    `(${formatNumber(holderCount)} holders), ` +
+                    `and elevated market attention ` +
+                    `(${formatNumber(attention)}).`,
+                contributingSignals: ['momentum', 'liquidity', 'holders', 'attention'],
+                signalValues: {
+                    momentum,
+                    liquidity,
+                    holders,
+                    attention,
+                },
+            });
 
-    if (strongPositiveMomentum && sufficientLiquidity && holderLevelSubstantial && attentionLevelElevated) {
-      evidence.push({
-        description: `Strong positive momentum (${momOrig.toFixed(2)}% 24h change), sufficient liquidity (${liqOrig.toFixed(0)} USD), substantial holder base (${holdOrig.toFixed(0)} holders), and elevated social activity (${attOrig.toFixed(0)} posts/24h)`,
-        contributingSignals: ['momentum', 'liquidity', 'holders', 'attention'],
-        signalValues: {
-          momentum: mom,
-          liquidity: liq,
-          holders: hold,
-          attention: att
+            return {
+                pattern: 'momentum_breakout',
+                evidence,
+                riskFlags,
+            };
         }
-      });
-      return {
-        pattern: 'momentum_breakout',
-        evidence,
-        riskFlags
-      };
     }
-  }
 
-  // Check for Social-Only Hype pattern
-  // Adapted interpretation:
-  // * attention level is high
-  // * but holder level, wallet balance, liquidity level or positive momentum do not provide comparable confirmation
-  if (isAvailable(normalizedSignals.attention)) {
-    const highAttentionLevel =
-      att >= CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.attentionMin; // e.g., high social activity
+    /*
+     * SOCIAL / MARKET-ATTENTION HYPE
+     *
+     * This is now explicitly based on MARKET attention.
+     * We do not claim that it represents social-media mentions.
+     */
+    if (isAvailable(normalizedSignals.attention)) {
+        const highAttention = attention >= CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.attentionMin;
 
-    const weakOrNegativeMomentum =
-      momOrig < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.momentumMax || // e.g., not strong positive momentum
-      momOrig <= 0; // Zero or negative momentum
+        const weakMomentum = momentum < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.momentumMax;
 
-    const lowLiquidityLevel =
-      liqOrig < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.liquidityMax; // e.g., low liquidity
+        const lowLiquidity = liquidity < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.liquidityMax;
 
-    const lowHolderLevel =
-  holdOrig < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.holderLevelMax;
+        const weakHolderBase =
+            !isAvailable(normalizedSignals.holders) ||
+            holders < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.holderLevelMax;
 
-    const lowWalletBalance =
-  wfOrig < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.walletBalanceMax;
-    if (highAttentionLevel && weakOrNegativeMomentum && lowLiquidityLevel && lowHolderLevel && lowWalletBalance) {
-      evidence.push({
-        description: `High social media attention (${attOrig.toFixed(0)} posts/24h) without corresponding momentum (${momOrig.toFixed(2)}% 24h change), liquidity (${liqOrig.toFixed(0)} USD), holder base (${holdOrig.toFixed(0)} holders), or wallet holdings (${wfOrig.toFixed(2)} tokens)`,
-        contributingSignals: ['attention'],
-        signalValues: {
-          attention: att
+        const weakWalletFlow =
+            !isAvailable(normalizedSignals.walletFlow) ||
+            walletFlow < CONFIG.PATTERN_THRESHOLDS.SOCIAL_ONLY_HYPE.walletFlowMax;
+
+        if (highAttention && weakMomentum && lowLiquidity && weakHolderBase && weakWalletFlow) {
+            evidence.push({
+                description:
+                    `Market attention is elevated ` +
+                    `(${formatNumber(attention)}) while momentum, ` +
+                    `liquidity, holder breadth, and tracked-wallet flow ` +
+                    `remain comparatively weak.`,
+                contributingSignals: ['attention', 'momentum', 'liquidity', 'holders', 'walletFlow'],
+                signalValues: {
+                    attention,
+                    momentum,
+                    liquidity,
+                    holders,
+                    walletFlow,
+                },
+            });
+
+            return {
+                pattern: 'social_only_hype',
+                evidence,
+                riskFlags,
+            };
         }
-      });
-      return {
-        pattern: 'social_only_hype',
-        evidence,
-        riskFlags
-      };
     }
-  }
 
-  // Check for Distribution pattern
-  // Adapted interpretation (since we can't measure flow/change directly):
-  // * holder level is low (declining interest)
-  // * wallet balance is low or decreasing relative to expectation (but we only have current level)
-  // * momentum is negative/weakening
-  // * liquidity may be deteriorating
-  if (isAvailable(normalizedSignals.walletFlow) &&
-      isAvailable(normalizedSignals.holders) &&
-      isAvailable(normalizedSignals.momentum)) {
+    /*
+     * DISTRIBUTION
+     *
+     * This requires NEGATIVE wallet flow.
+     *
+     * A low current wallet balance alone does not prove distribution.
+     */
+    if (
+        isAvailable(normalizedSignals.walletFlow) &&
+        isAvailable(normalizedSignals.holders) &&
+        isAvailable(normalizedSignals.momentum)
+    ) {
+        const weakHolderBase = holders < CONFIG.PATTERN_THRESHOLDS.DISTRIBUTION.holderLevelMax;
 
-    const holderLevelLow =
-      holdOrig < CONFIG.PATTERN_THRESHOLDS.DISTRIBUTION.holderLevelMax; // e.g., holder count declining
+        const walletDistribution =
+            walletFlow < CONFIG.PATTERN_THRESHOLDS.DISTRIBUTION.walletFlowMax && walletFlowPositive === false;
 
-    const walletBalanceLow =
-      wfOrig < CONFIG.PATTERN_THRESHOLDS.DISTRIBUTION.walletBalanceMax; // e.g., low wallet holdings
+        const negativeMomentum =
+            momentumOriginal !== null &&
+            momentumOriginal < 0 &&
+            momentum < CONFIG.PATTERN_THRESHOLDS.DISTRIBUTION.momentumMax;
 
-    const momentumWeakening =
-      momOrig < CONFIG.PATTERN_THRESHOLDS.DISTRIBUTION.momentumMax && // e.g., momentum weakening
-      momOrig < 0; // Negative momentum
+        if (weakHolderBase && walletDistribution && negativeMomentum) {
+            evidence.push({
+                description:
+                    `Tracked wallets show negative net flow ` +
+                    `(${formatNumber(walletFlowRatio)}), holder breadth is low ` +
+                    `(${formatNumber(holderCount)} holders), and price momentum ` +
+                    `is negative (${formatNumber(momentumOriginal)}% 24h change).`,
+                contributingSignals: ['walletFlow', 'holders', 'momentum'],
+                signalValues: {
+                    walletFlow,
+                    holders,
+                    momentum,
+                },
+            });
 
-    if (holderLevelLow && walletBalanceLow && momentumWeakening) {
-      evidence.push({
-        description: `Low holder count (${holdOrig.toFixed(0)} holders), low tracked wallet holdings (${wfOrig.toFixed(2)} tokens), and negative momentum (${momOrig.toFixed(2)}% 24h change)`,
-        contributingSignals: ['walletFlow', 'holders', 'momentum'],
-        signalValues: {
-          walletFlow: wf,
-          holders: hold,
-          momentum: mom
+            return {
+                pattern: 'distribution',
+                evidence,
+                riskFlags,
+            };
         }
-      });
-      return {
-        pattern: 'distribution',
-        evidence,
-        riskFlags
-      };
     }
-  }
 
-  // Check for Liquidity Risk pattern
-  // Adapted interpretation:
-  // * liquidity is low (may indicate elevated execution risk)
-  if (isAvailable(normalizedSignals.liquidity)) {
-    const lowLiquidity =
-      liqOrig < CONFIG.PATTERN_THRESHOLDS.LIQUIDITY_RISK.liquidityMax; // e.g., low liquidity USD
+    /*
+     * LIQUIDITY RISK
+     *
+     * This is a risk flag rather than necessarily a market pattern.
+     */
+    if (isAvailable(normalizedSignals.liquidity)) {
+        const lowLiquidity = liquidity < CONFIG.PATTERN_THRESHOLDS.LIQUIDITY_RISK.liquidityMax;
 
-    // We would need volatility data for a complete check
-    // For now, just flag based on low liquidity
-    if (lowLiquidity) {
-      riskFlags.push({
-        type: 'liquidity_risk',
-        severity: 'high',
-        description: `Liquidity is low (${liqOrig.toFixed(0)} USD), which may indicate elevated execution risk`,
-        signal: 'liquidity'
-      });
+        if (lowLiquidity) {
+            riskFlags.push({
+                type: 'liquidity_risk',
+                severity: 'high',
+                description: `Liquidity is low (${formatNumber(
+                    liquidityOriginal,
+                )} USD), which may indicate elevated execution risk.`,
+                signal: 'liquidity',
+            });
 
-      evidence.push({
-        description: `Low liquidity detected (${liqOrig.toFixed(0)} USD) which may pose execution risks for larger trades`,
-        contributingSignals: ['liquidity'],
-        signalValues: {
-          liquidity: liq
+            evidence.push({
+                description: `Low liquidity detected (${formatNumber(
+                    liquidityOriginal,
+                )} USD), which may increase execution risk for larger trades.`,
+                contributingSignals: ['liquidity'],
+                signalValues: {
+                    liquidity,
+                },
+            });
+
+            return {
+                pattern: 'liquidity_risk',
+                evidence,
+                riskFlags,
+            };
         }
-      });
-      return {
-        pattern: 'liquidity_risk',
-        evidence,
-        riskFlags
-      };
     }
-  }
 
-  // No clear pattern detected
-  return {
-    pattern: null,
-    evidence: evidence.length > 0 ? evidence : [{
-      description: 'No strong convergence pattern detected from available signals',
-      contributingSignals: Object.keys(normalizedSignals).filter(k =>
-        normalizedSignals[k as keyof Signals].available) as (keyof Signals)[],
-      signalValues: {}
-    }],
-    riskFlags
-  };
+    /*
+     * No clear convergence.
+     */
+    const availableSignals = (Object.keys(normalizedSignals) as (keyof Signals)[]).filter((key) =>
+        isAvailable(normalizedSignals[key]),
+    );
+
+    evidence.push({
+        description: 'No strong convergence pattern detected from the available signals.',
+        contributingSignals: availableSignals,
+        signalValues: {
+            momentum,
+            liquidity,
+            holders,
+            walletFlow,
+            attention,
+        },
+    });
+
+    return {
+        pattern: null,
+        evidence,
+        riskFlags,
+    };
+}
+
+function formatNumber(value: number | null): string {
+    if (value === null) {
+        return 'unavailable';
+    }
+
+    return value.toLocaleString('en-US', {
+        maximumFractionDigits: 2,
+    });
 }

@@ -1,39 +1,80 @@
-// Main signal fetching orchestrator
-
-import type { ActorInput, Signals } from '../types/index.js';
-import type { SignalValue } from '../types/index.js';
 import { CONFIG } from '../config/index.js';
+import type { ActorInput, Signals } from '../types/index.js';
 import { fetchAttentionSignal } from './attention.js';
 import { fetchHoldersSignal } from './holders.js';
 import { fetchLiquiditySignal } from './liquidity.js';
 import { fetchMomentumSignal } from './momentum.js';
 import { fetchWalletFlowSignal } from './walletFlow.js';
 
-/**
- * Fetches all signals for a token
- */
 export async function fetchAllSignals(
   tokenAddress: string,
-  input: ActorInput
+  input: ActorInput,
 ): Promise<Signals> {
-  // Fetch all signals concurrently
-  const [momentum, liquidity, holders, walletFlow, attention] = await Promise.all([
-    fetchMomentumSignal(tokenAddress, 'solana', input.observationWindowHours ?? CONFIG.DEFAULT_OBSERVATION_WINDOW_HOURS),
-    fetchLiquiditySignal(tokenAddress, 'solana'),
-    fetchHoldersSignal(tokenAddress, 'solana', input.observationWindowHours ?? CONFIG.DEFAULT_OBSERVATION_WINDOW_HOURS),
-    fetchWalletFlowSignal(tokenAddress, input.trackedWalletAddresses ?? [], 'solana'),
-    fetchAttentionSignal(
-      tokenAddress,
-      undefined, // Token symbol will be fetched from CoinGecko internally if needed
-      input.observationWindowHours ?? CONFIG.DEFAULT_OBSERVATION_WINDOW_HOURS
-    )
-  ]);
+  const observationWindowHours =
+    input.observationWindowHours ?? CONFIG.DEFAULT_OBSERVATION_WINDOW_HOURS;
+
+  const enabled = new Set(
+    input.enabledSignalCategories ?? [
+      'momentum',
+      'liquidity',
+      'holders',
+      'walletFlow',
+      'attention',
+    ],
+  );
+
+  const unavailable = (source: string) => ({
+    value: null,
+    timestamp: Date.now(),
+    source,
+    available: false,
+  });
+
+  const [momentum, liquidity, holders, walletFlow, attention] =
+    await Promise.all([
+      enabled.has('momentum')
+        ? fetchMomentumSignal(
+            tokenAddress,
+            'solana',
+            observationWindowHours,
+          )
+        : Promise.resolve(unavailable('disabled')),
+
+      enabled.has('liquidity')
+        ? fetchLiquiditySignal(tokenAddress, 'solana')
+        : Promise.resolve(unavailable('disabled')),
+
+      enabled.has('holders')
+        ? fetchHoldersSignal(
+            tokenAddress,
+            'solana',
+            observationWindowHours,
+          )
+        : Promise.resolve(unavailable('disabled')),
+
+      enabled.has('walletFlow')
+        ? fetchWalletFlowSignal(
+            tokenAddress,
+            input.trackedWalletAddresses ?? [],
+            'solana',
+            observationWindowHours,
+          )
+        : Promise.resolve(unavailable('disabled')),
+
+      enabled.has('attention')
+        ? fetchAttentionSignal(
+            tokenAddress,
+            undefined,
+            observationWindowHours,
+          )
+        : Promise.resolve(unavailable('disabled')),
+    ]);
 
   return {
     momentum,
     liquidity,
     holders,
     walletFlow,
-    attention
+    attention,
   };
 }
