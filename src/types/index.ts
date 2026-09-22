@@ -26,7 +26,7 @@ export interface RiskFlag {
     type: string;
     severity: 'low' | 'medium' | 'high';
     description: string;
-    signal: keyof Signals;
+    signal: keyof Signals | 'general';
 }
 
 export interface RadarResult {

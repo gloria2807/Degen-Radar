@@ -176,7 +176,18 @@ for (const tokenAddress of tokensToProcess) {
                 attention: rawSignals.attention,
             },
             evidence,
-            riskFlags,
+            riskFlags:
+  riskFlags.length > 0
+    ? riskFlags
+    : [
+        {
+          type: 'none_detected',
+          severity: 'low',
+          description:
+            'No major risk flags detected from the available signals.',
+          signal: 'momentum',
+        },
+      ],
             sourceData: {
                 observationWindowHours,
                 processedAt: Date.now(),
