@@ -1,75 +1,48 @@
 {
-  "$schema": "https://apify.com/schemas/v1/input.ide.json",
   "title": "Degen Radar Input",
+  "description": "Analyze Solana tokens using market momentum, liquidity, holder breadth, wallet flow and market attention.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
     "tokenAddresses": {
       "title": "Token Addresses",
-      "type": "array",
       "description": "Solana token mint addresses to analyze.",
+      "type": "array",
       "editor": "stringList",
       "items": {
         "type": "string"
-      }
+      },
+      "minItems": 1,
+      "maxItems": 50
     },
     "maxTokens": {
       "title": "Maximum Tokens",
-      "type": "integer",
       "description": "Maximum number of tokens to process.",
+      "type": "integer",
       "default": 10,
       "minimum": 1,
       "maximum": 50
     },
     "observationWindowHours": {
       "title": "Observation Window (hours)",
-      "type": "integer",
       "description": "Observation window used by time-dependent signal sources.",
+      "type": "integer",
       "default": 4,
       "minimum": 1,
       "maximum": 168
     },
     "minSignalAvailability": {
       "title": "Minimum Signal Availability",
-      "type": "number",
       "description": "Minimum fraction of signals that must be available before a token is analyzed.",
+      "type": "number",
       "default": 0.6,
       "minimum": 0,
       "maximum": 1
     },
-    "enabledSignalCategories": {
-      "title": "Enabled Signal Categories",
-      "type": "array",
-      "description": "Signal categories to collect.",
-      "default": [
-        "momentum",
-        "liquidity",
-        "holders",
-        "walletFlow",
-        "attention"
-      ],
-      "items": {
-        "type": "string",
-        "enum": [
-          "momentum",
-          "liquidity",
-          "holders",
-          "walletFlow",
-          "attention"
-        ],
-        "enumTitles": [
-          "Momentum",
-          "Liquidity",
-          "Holders",
-          "Wallet Flow",
-          "Attention"
-        ]
-      }
-    },
     "trackedWalletAddresses": {
       "title": "Tracked Wallet Addresses",
-      "type": "array",
       "description": "Optional Solana wallet addresses to monitor for token flow.",
+      "type": "array",
       "editor": "stringList",
       "items": {
         "type": "string"
