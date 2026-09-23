@@ -1,12 +1,12 @@
 {
   "title": "Degen Radar Input",
-  "description": "Analyze Solana tokens using market momentum, liquidity, holder breadth, wallet flow and market attention.",
+  "description": "Analyze Solana tokens by combining momentum, liquidity, holder breadth, tracked-wallet flow and market attention into explainable pattern and risk analysis.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
     "tokenAddresses": {
       "title": "Token Addresses",
-      "description": "Solana token mint addresses to analyze.",
+      "description": "One or more Solana token mint addresses to analyze. Up to 50 tokens can be processed in one run.",
       "type": "array",
       "editor": "stringList",
       "items": {
@@ -17,7 +17,7 @@
     },
     "maxTokens": {
       "title": "Maximum Tokens",
-      "description": "Maximum number of tokens to process.",
+      "description": "Maximum number of token addresses to process from the list.",
       "type": "integer",
       "default": 10,
       "minimum": 1,
@@ -33,15 +33,45 @@
     },
     "minSignalAvailability": {
       "title": "Minimum Signal Availability",
-      "description": "Minimum fraction of signals that must be available before a token is analyzed.",
+      "description": "Minimum fraction of configured signals that must be available before a token is analyzed. Default: 60%.",
       "type": "number",
       "default": 0.6,
       "minimum": 0,
       "maximum": 1
     },
+    "enabledSignalCategories": {
+      "title": "Signal Categories",
+      "description": "Select which signal categories Degen Radar should collect and analyze.",
+      "type": "array",
+      "editor": "select",
+      "items": {
+        "type": "string",
+        "enum": [
+          "momentum",
+          "liquidity",
+          "holders",
+          "walletFlow",
+          "attention"
+        ],
+        "enumTitles": [
+          "Momentum",
+          "Liquidity",
+          "Holders",
+          "Wallet Flow",
+          "Market Attention"
+        ]
+      },
+      "default": [
+        "momentum",
+        "liquidity",
+        "holders",
+        "walletFlow",
+        "attention"
+      ]
+    },
     "trackedWalletAddresses": {
       "title": "Tracked Wallet Addresses",
-      "description": "Optional Solana wallet addresses to monitor for token flow.",
+      "description": "Optional Solana wallet addresses to monitor for token flow. Wallet-flow data is unavailable when no tracked wallets are provided.",
       "type": "array",
       "editor": "stringList",
       "items": {

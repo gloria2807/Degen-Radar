@@ -1,208 +1,386 @@
 {
-    "actorSpecification": 1,
-    "fields": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
+  "actorSpecification": 1,
+  "fields": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "title": "Result ID",
+        "description": "Unique identifier for this radar result"
+      },
+      "token": {
+        "type": "string",
+        "title": "Token Symbol",
+        "description": "Token symbol or address if symbol is unavailable"
+      },
+      "tokenAddress": {
+        "type": "string",
+        "title": "Token Address",
+        "description": "Solana token mint address"
+      },
+      "chain": {
+        "type": "string",
+        "title": "Blockchain",
+        "description": "Blockchain network"
+      },
+      "timestamp": {
+        "type": "number",
+        "title": "Timestamp",
+        "description": "When the signal data was collected as a Unix timestamp in milliseconds"
+      },
+      "radarScore": {
+        "type": "number",
+        "title": "Radar Score",
+        "description": "Weighted summary of available normalized signals from 0 to 100. This is not a price prediction."
+      },
+      "pattern": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Detected Pattern",
+        "description": "Detected convergence pattern, or null when no pattern is established"
+      },
+
+      "signals": {
         "type": "object",
+        "title": "Signal Details",
+        "description": "Raw and normalized signal values, availability, sources, timestamps, and metadata",
         "properties": {
-            "id": {
-                "type": "string",
-                "title": "Result ID",
-                "description": "Unique identifier for this radar result"
-            },
-            "token": {
-                "type": "string",
-                "title": "Token Symbol",
-                "description": "Token symbol or address if symbol is unavailable"
-            },
-            "tokenAddress": {
-                "type": "string",
-                "title": "Token Address",
-                "description": "Solana token mint address"
-            },
-            "chain": {
-                "type": "string",
-                "title": "Blockchain",
-                "description": "Blockchain network"
-            },
-            "timestamp": {
-                "type": "number",
-                "title": "Timestamp",
-                "description": "When the signal data was collected as a Unix timestamp in milliseconds"
-            },
-            "radarScore": {
-                "type": "number",
-                "title": "Radar Score",
-                "description": "Convergence-based evidence score from 0 to 100. This is not a price prediction."
-            },
-            "pattern": {
-                "type": [
-                    "string",
-                    "null"
-                ],
-                "title": "Detected Pattern",
-                "description": "Detected convergence pattern, or null when no pattern is established"
-            },
-            "signals": {
-                "type": "object",
-                "title": "Signal Details",
-                "description": "Signal values, availability, sources, timestamps, and metadata",
-                "properties": {
-                    "momentum": {
-                        "type": "object"
-                    },
-                    "liquidity": {
-                        "type": "object"
-                    },
-                    "holders": {
-                        "type": "object"
-                    },
-                    "walletFlow": {
-                        "type": "object"
-                    },
-                    "attention": {
-                        "type": "object"
-                    }
-                }
-            },
-            "evidence": {
-                "type": "array",
-                "title": "Evidence",
-                "description": "Evidence supporting the detected pattern",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "description": {
-                            "type": "string"
-                        },
-                        "contributingSignals": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "signalValues": {
-                            "type": "object"
-                        }
-                    },
-                    "required": [
-                        "description",
-                        "contributingSignals",
-                        "signalValues"
-                    ]
-                }
-            },
-            "riskFlags": {
-                "type": "array",
-                "title": "Risk Flags",
-                "description": "Risks and limitations identified from the collected data",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "type": {
-                            "type": "string"
-                        },
-                        "severity": {
-                            "type": "string",
-                            "enum": [
-                                "low",
-                                "medium",
-                                "high"
-                            ]
-                        },
-                        "description": {
-                            "type": "string"
-                        },
-                        "signal": {
-                            "type": "string",
-                            "enum": [
-                                "momentum",
-                                "liquidity",
-                                "holders",
-                                "walletFlow",
-                                "attention",
-                                "general"
-                            ]
-                        }
-                    },
-                    "required": [
-                        "type",
-                        "severity",
-                        "description",
-                        "signal"
-                    ]
-                }
-            },
-            "sourceData": {
-                "type": "object",
-                "title": "Source Data",
-                "description": "Metadata about the analysis and API sources used"
-            },
-            "discoveredAt": {
-                "type": "number",
-                "title": "Discovered At",
-                "description": "When this radar result was generated as a Unix timestamp in milliseconds"
+          "momentum": {
+            "type": "object"
+          },
+          "liquidity": {
+            "type": "object"
+          },
+          "holders": {
+            "type": "object"
+          },
+          "walletFlow": {
+            "type": "object"
+          },
+          "attention": {
+            "type": "object"
+          }
+        }
+      },
+
+      "convergence": {
+        "type": "object",
+        "title": "Signal Convergence",
+        "description": "Explains how available signals support or contradict the detected pattern.",
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Convergence Strength",
+            "enum": [
+              "strong",
+              "moderate",
+              "weak",
+              "none"
+            ]
+          },
+          "supportingSignals": {
+            "type": "array",
+            "title": "Supporting Signals",
+            "items": {
+              "type": "string",
+              "enum": [
+                "momentum",
+                "liquidity",
+                "holders",
+                "walletFlow",
+                "attention"
+              ]
             }
+          },
+          "contradictingSignals": {
+            "type": "array",
+            "title": "Contradicting Signals",
+            "items": {
+              "type": "string",
+              "enum": [
+                "momentum",
+                "liquidity",
+                "holders",
+                "walletFlow",
+                "attention"
+              ]
+            }
+          },
+          "unavailableSignals": {
+            "type": "array",
+            "title": "Unavailable Signals",
+            "items": {
+              "type": "string",
+              "enum": [
+                "momentum",
+                "liquidity",
+                "holders",
+                "walletFlow",
+                "attention"
+              ]
+            }
+          },
+          "reason": {
+            "type": "string",
+            "title": "Convergence Reason"
+          }
         },
         "required": [
-            "id",
-            "tokenAddress",
-            "chain",
-            "timestamp",
-            "radarScore",
-            "pattern",
-            "signals",
-            "evidence",
-            "riskFlags",
-            "discoveredAt"
+          "status",
+          "supportingSignals",
+          "contradictingSignals",
+          "unavailableSignals",
+          "reason"
         ]
-    },
-    "views": {
-        "overview": {
-            "title": "Degen Radar Overview",
-            "transformation": {
-                "fields": [
-                    "token",
-                    "tokenAddress",
-                    "radarScore",
-                    "pattern",
-                    "timestamp",
-                    "evidence",
-                    "riskFlags"
-                ]
-            },
-            "display": {
-                "component": "table",
-                "properties": {
-                    "token": {
-                        "label": "Token",
-                        "format": "text"
-                    },
-                    "tokenAddress": {
-                        "label": "Address",
-                        "format": "text"
-                    },
-                    "radarScore": {
-                        "label": "Radar Score",
-                        "format": "number"
-                    },
-                    "pattern": {
-                        "label": "Pattern",
-                        "format": "text"
-                    },
-                    "timestamp": {
-                        "label": "Time",
-                        "format": "date"
-                    },
-                    "evidence": {
-                        "label": "Evidence",
-                        "format": "text"
-                    },
-                    "riskFlags": {
-                        "label": "Risk Flags",
-                        "format": "text"
-                    }
-                }
+      },
+
+      "patternAnalysis": {
+        "type": "object",
+        "title": "Pattern Analysis",
+        "description": "Detailed explanation of the detected pattern and the evidence supporting or contradicting it.",
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Pattern Name"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Pattern Reason"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Pattern Confidence",
+            "enum": [
+              "strong",
+              "moderate",
+              "weak",
+              "none"
+            ]
+          },
+          "supportingSignals": {
+            "type": "array",
+            "title": "Supporting Signals",
+            "items": {
+              "type": "string",
+              "enum": [
+                "momentum",
+                "liquidity",
+                "holders",
+                "walletFlow",
+                "attention"
+              ]
             }
+          },
+          "contradictingSignals": {
+            "type": "array",
+            "title": "Contradicting Signals",
+            "items": {
+              "type": "string",
+              "enum": [
+                "momentum",
+                "liquidity",
+                "holders",
+                "walletFlow",
+                "attention"
+              ]
+            }
+          }
+        },
+        "required": [
+          "name",
+          "reason",
+          "confidence",
+          "supportingSignals",
+          "contradictingSignals"
+        ]
+      },
+
+      "researchSummary": {
+        "type": "object",
+        "title": "Research Summary",
+        "description": "Human-readable summary of the analysis and its limitations.",
+        "properties": {
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "interpretation": {
+            "type": "string",
+            "title": "Interpretation"
+          },
+          "limitations": {
+            "type": "array",
+            "title": "Limitations",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "headline",
+          "interpretation",
+          "limitations"
+        ]
+      },
+
+      "evidence": {
+        "type": "array",
+        "title": "Evidence",
+        "description": "Evidence supporting the detected pattern",
+        "items": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "contributingSignals": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "signalValues": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "description",
+            "contributingSignals",
+            "signalValues"
+          ]
         }
+      },
+
+      "riskFlags": {
+        "type": "array",
+        "title": "Risk Flags",
+        "description": "Risks and limitations identified from the collected data",
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "description": {
+              "type": "string"
+            },
+            "signal": {
+              "type": "string",
+              "enum": [
+                "momentum",
+                "liquidity",
+                "holders",
+                "walletFlow",
+                "attention",
+                "general"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "severity",
+            "description",
+            "signal"
+          ]
+        }
+      },
+
+      "sourceData": {
+        "type": "object",
+        "title": "Source Data",
+        "description": "Metadata about the analysis and API sources used"
+      },
+
+      "discoveredAt": {
+        "type": "number",
+        "title": "Discovered At",
+        "description": "When this radar result was generated as a Unix timestamp in milliseconds"
+      }
+    },
+
+    "required": [
+      "id",
+      "tokenAddress",
+      "chain",
+      "timestamp",
+      "radarScore",
+      "pattern",
+      "signals",
+      "convergence",
+      "patternAnalysis",
+      "researchSummary",
+      "evidence",
+      "riskFlags",
+      "discoveredAt"
+    ]
+  },
+
+  "views": {
+    "overview": {
+      "title": "Degen Radar Overview",
+      "transformation": {
+        "fields": [
+          "token",
+          "tokenAddress",
+          "radarScore",
+          "pattern",
+          "convergence",
+          "evidence",
+          "riskFlags",
+          "timestamp"
+        ]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "token": {
+            "label": "Token",
+            "format": "text"
+          },
+          "tokenAddress": {
+            "label": "Address",
+            "format": "text"
+          },
+          "radarScore": {
+            "label": "Radar Score",
+            "format": "number"
+          },
+          "pattern": {
+            "label": "Pattern",
+            "format": "text"
+          },
+          "convergence": {
+            "label": "Convergence",
+            "format": "text"
+          },
+          "evidence": {
+            "label": "Evidence",
+            "format": "text"
+          },
+          "riskFlags": {
+            "label": "Risk Flags",
+            "format": "text"
+          },
+          "timestamp": {
+            "label": "Time",
+            "format": "date"
+          }
+        }
+      }
     }
+  }
 }
