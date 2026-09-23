@@ -13,7 +13,12 @@
         "type": "string"
       },
       "minItems": 1,
-      "maxItems": 50
+      "maxItems": 50,
+      "default": [
+        "J3FnBoPv9vLTPi2Lj1S4NFRaWoEDQ47Sy3E4ZfrVBAGS",
+        "CDAC33JvozJ1UjxBMkvZgJcVXoxdH9iGxeBXUJdXpump",
+        "62yzpmKJB6XiVtZcQZhUkUXhqwN3UgCbffUi4JM9pump"
+      ]
     },
     "maxTokens": {
       "title": "Maximum Tokens",
