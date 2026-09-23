@@ -331,18 +331,34 @@
 
   "views": {
     "overview": {
-      "title": "Degen Radar Overview",
+      "title": "Degen Radar Results",
+      "description": "Readable overview of the token analysis, signal convergence, evidence and risks.",
       "transformation": {
+        "flatten": [
+          "convergence",
+          "patternAnalysis",
+          "researchSummary"
+        ],
         "fields": [
           "token",
           "tokenAddress",
           "radarScore",
           "pattern",
-          "convergence",
+          "convergence.status",
+          "convergence.supportingSignals",
+          "convergence.contradictingSignals",
+          "convergence.unavailableSignals",
+          "convergence.reason",
+          "patternAnalysis.confidence",
+          "patternAnalysis.reason",
+          "researchSummary.headline",
+          "researchSummary.interpretation",
+          "researchSummary.limitations",
           "evidence",
           "riskFlags",
           "timestamp"
-        ]
+        ],
+        "desc": true
       },
       "display": {
         "component": "table",
@@ -363,17 +379,53 @@
             "label": "Pattern",
             "format": "text"
           },
-          "convergence": {
+          "convergence.status": {
             "label": "Convergence",
             "format": "text"
           },
+          "convergence.supportingSignals": {
+            "label": "Supporting Signals",
+            "format": "array"
+          },
+          "convergence.contradictingSignals": {
+            "label": "Contradicting Signals",
+            "format": "array"
+          },
+          "convergence.unavailableSignals": {
+            "label": "Unavailable Signals",
+            "format": "array"
+          },
+          "convergence.reason": {
+            "label": "Convergence Reason",
+            "format": "text"
+          },
+          "patternAnalysis.confidence": {
+            "label": "Pattern Confidence",
+            "format": "text"
+          },
+          "patternAnalysis.reason": {
+            "label": "Pattern Analysis",
+            "format": "text"
+          },
+          "researchSummary.headline": {
+            "label": "Research Summary",
+            "format": "text"
+          },
+          "researchSummary.interpretation": {
+            "label": "Interpretation",
+            "format": "text"
+          },
+          "researchSummary.limitations": {
+            "label": "Limitations",
+            "format": "array"
+          },
           "evidence": {
             "label": "Evidence",
-            "format": "text"
+            "format": "array"
           },
           "riskFlags": {
             "label": "Risk Flags",
-            "format": "text"
+            "format": "array"
           },
           "timestamp": {
             "label": "Time",
